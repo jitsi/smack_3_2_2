@@ -38,6 +38,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Utility class that helps to parse packets. Any parsing packets method that must be shared
@@ -46,6 +48,8 @@ import java.util.Map;
  * @author Gaston Dombiak
  */
 public class PacketParserUtils {
+
+    private static final Logger LOGGER = Logger.getLogger(PacketParserUtils.class.getName());
 
     /**
      * Namespace used to store packet properties.
@@ -612,7 +616,7 @@ public class PacketParserUtils {
                                     value = in.readObject();
                                 }
                                 catch (Exception e) {
-                                    e.printStackTrace();
+                                    LOGGER.log(Level.SEVERE, "", e);
                                 }
                             }
                             if (name != null && value != null) {
@@ -744,7 +748,7 @@ public class PacketParserUtils {
         }
         catch (IllegalArgumentException iae) {
             // Print stack trace. We shouldn't be getting an illegal error type.
-            iae.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", iae);
         }
         return new XMPPError(Integer.parseInt(errorCode), errorType, condition, message, extensions);
     }

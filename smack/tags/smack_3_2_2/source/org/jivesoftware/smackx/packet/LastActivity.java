@@ -30,6 +30,9 @@ import org.jivesoftware.smack.provider.IQProvider;
 import org.jivesoftware.smack.util.StringUtils;
 import org.xmlpull.v1.XmlPullParser;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  * A last activity IQ for retrieving information about the last activity associated with a Jabber ID.
  * LastActivity (JEP-012) allows for retrieval of how long a particular user has been idle and the
@@ -39,6 +42,8 @@ import org.xmlpull.v1.XmlPullParser;
  * @author Derek DeMoro
  */
 public class LastActivity extends IQ {
+
+    private static final Logger LOGGER = Logger.getLogger(LastActivity.class.getName());
 
     public long lastActivity = -1;
     public String message;
@@ -119,7 +124,7 @@ public class LastActivity extends IQ {
                 }
             }
             catch (Exception e) {
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "", e);
             }
             return lastActivity;
         }

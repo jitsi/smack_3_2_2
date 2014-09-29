@@ -31,6 +31,8 @@ import javax.security.auth.callback.CallbackHandler;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * <p>This class is responsible authenticating the user using SASL, binding the resource
@@ -62,6 +64,8 @@ import java.util.*;
  * @author Jay Kline
  */
 public class SASLAuthentication implements UserAuthentication {
+
+    private static final Logger LOGGER = Logger.getLogger(SASLAuthentication.class.getName());
 
     private static Map<String, Class> implementedMechanisms = new HashMap<String, Class>();
     private static List<String> mechanismsPreferences = new ArrayList<String>();
@@ -272,7 +276,7 @@ public class SASLAuthentication implements UserAuthentication {
                 throw e;
             }
             catch (Exception e) {
-                e.printStackTrace();
+                LOGGER.log(Level.INFO, "SASL Authentication failed", e);
             }
         }
         else {
@@ -357,7 +361,7 @@ public class SASLAuthentication implements UserAuthentication {
                 throw e;
             }
             catch (Exception e) {
-                e.printStackTrace();
+                LOGGER.log(Level.FINE, "SASL authentication failed", e);
                 // SASL authentication failed so try a Non-SASL authentication
                 return new NonSASLAuthentication(connection)
                         .authenticate(username, password, resource);

@@ -26,6 +26,8 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Writes packets to a XMPP server. Packets are sent using a dedicated thread. Packet
@@ -38,6 +40,8 @@ import java.util.concurrent.BlockingQueue;
  * @author Matt Tucker
  */
 class PacketWriter {
+
+    private static final Logger LOGGER = Logger.getLogger(PacketWriter.class.getName());
 
     private Thread writerThread;
     private Thread keepAliveThread;
@@ -95,7 +99,7 @@ class PacketWriter {
                 queue.put(packet);
             }
             catch (InterruptedException ie) {
-                ie.printStackTrace();
+                LOGGER.log(Level.SEVERE, "parser error", ie);
                 return;
             }
             synchronized (queue) {
@@ -209,7 +213,7 @@ class PacketWriter {
                 }
             }
             catch (Exception e) {
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "Error writing packet", e);
             }
 
             // Delete the queue contents (hopefully nothing is left).

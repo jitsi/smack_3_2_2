@@ -42,6 +42,8 @@ import java.security.KeyStore;
 import java.security.Provider;
 import java.security.Security;
 import java.util.Collection;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Creates a socket connection to a XMPP server. This is the default connection
@@ -51,6 +53,8 @@ import java.util.Collection;
  * @author Matt Tucker
  */
 public class XMPPConnection extends Connection {
+
+    private static final Logger LOGGER = Logger.getLogger(XMPPConnection.class.getName());
 
     /**
      * The socket which is used for this connection.
@@ -674,7 +678,7 @@ public class XMPPConnection extends Connection {
                     reader = new BufferedReader(new InputStreamReader((InputStream) in, "UTF-8"));
                 }
                 catch (Exception e) {
-                    e.printStackTrace();
+                    LOGGER.log(Level.INFO, "Error writing packet", e);
                     reader = new BufferedReader(
                             new InputStreamReader(socket.getInputStream(), "UTF-8"));
                     writer = new BufferedWriter(
@@ -990,7 +994,7 @@ public class XMPPConnection extends Connection {
                 packetReader.notifyReconnection();
             }
             catch (XMPPException e) {
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "Error login", e);
             }
         }
     }

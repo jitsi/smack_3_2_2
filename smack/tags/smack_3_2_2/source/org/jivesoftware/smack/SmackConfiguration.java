@@ -26,6 +26,8 @@ import org.xmlpull.v1.XmlPullParser;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Represents the configuration of Smack. The configuration is used for:
@@ -43,6 +45,8 @@ import java.util.*;
  * @author Gaston Dombiak
  */
 public final class SmackConfiguration {
+
+    private static final Logger LOGGER = Logger.getLogger(SmackConfiguration.class.getName());
 
     private static final String SMACK_VERSION = "3.2.2";
 
@@ -109,7 +113,7 @@ public final class SmackConfiguration {
                         while (eventType != XmlPullParser.END_DOCUMENT);
                     }
                     catch (Exception e) {
-                        e.printStackTrace();
+                        LOGGER.log(Level.INFO, "", e);
                     }
                     finally {
                         try {
@@ -123,7 +127,7 @@ public final class SmackConfiguration {
             }
         }
         catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.FINER, "", e);
         }
     }
 
@@ -318,7 +322,7 @@ public final class SmackConfiguration {
             return Integer.parseInt(parser.nextText());
         }
         catch (NumberFormatException nfe) {
-            nfe.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", nfe);
             return defaultValue;
         }
     }

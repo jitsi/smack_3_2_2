@@ -31,6 +31,8 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.util.concurrent.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Listens for XML traffic from the XMPP server and parses it into packet objects.
@@ -41,6 +43,8 @@ import java.util.concurrent.*;
  * @author Matt Tucker
  */
 class PacketReader {
+
+    private static final Logger LOGGER = Logger.getLogger(PacketReader.class.getName());
 
     private Thread readerThread;
     private ExecutorService listenerExecutor;
@@ -136,7 +140,7 @@ class PacketReader {
                 catch (Exception e) {
                     // Cath and print any exception so we can recover
                     // from a faulty listener and finish the shutdown process
-                    e.printStackTrace();
+                    LOGGER.log(Level.SEVERE, "faulty listener", e);
                 }
             }
         }
@@ -165,7 +169,7 @@ class PacketReader {
         // Closes the connection temporary. A reconnection is possible
         connection.shutdown(new Presence(Presence.Type.unavailable));
         // Print the stack trace to help catch the problem
-        e.printStackTrace();
+        LOGGER.log(Level.SEVERE, "Closes the connection temporary", e);
         // Notify connection listeners of the error.
         for (ConnectionListener listener : connection.getConnectionListeners()) {
             try {
@@ -174,7 +178,7 @@ class PacketReader {
             catch (Exception e2) {
                 // Catch and print any exception so we can recover
                 // from a faulty listener
-                e2.printStackTrace();
+                LOGGER.log(Level.SEVERE, "faulty listener", e2);
             }
         }
     }
@@ -191,7 +195,7 @@ class PacketReader {
             catch (Exception e) {
                 // Catch and print any exception so we can recover
                 // from a faulty listener
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "faulty listener", e);
             }
         }
     }
@@ -208,7 +212,7 @@ class PacketReader {
             parser.setInput(connection.reader);
         }
         catch (XmlPullParserException xppe) {
-            xppe.printStackTrace();
+            LOGGER.log(Level.SEVERE, "parser error", xppe);
         }
     }
 

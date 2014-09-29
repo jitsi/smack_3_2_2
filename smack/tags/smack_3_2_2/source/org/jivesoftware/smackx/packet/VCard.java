@@ -42,6 +42,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A VCard class for use with the
@@ -84,6 +86,8 @@ import java.util.Map;
  * @author Kirill Maximov (kir@maxkir.com)
  */
 public class VCard extends IQ {
+
+    private static final Logger LOGGER = Logger.getLogger(VCard.class.getName());
 
     /**
      * Phone types:
@@ -330,7 +334,7 @@ public class VCard extends IQ {
             bytes = getBytes(avatarURL);
         }
         catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
         }
 
         setAvatar(bytes);
@@ -465,7 +469,7 @@ public class VCard extends IQ {
             digest = MessageDigest.getInstance("SHA-1");
         }
         catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
             return null;
         }
 

@@ -18,6 +18,8 @@ package org.jivesoftware.smackx.workgroup.util;
 
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This class is a very flexible event dispatcher which implements Runnable so that it can
@@ -33,6 +35,8 @@ import java.util.*;
  */
 public class ListenerEventDispatcher
     implements Runnable {
+
+    private static final Logger LOGGER = Logger.getLogger(ListenerEventDispatcher.class.getName());
 
     protected transient ArrayList triplets;
 
@@ -94,7 +98,7 @@ public class ListenerEventDispatcher
             } catch (Exception e) {
                 System.err.println("Exception dispatching an event: " + e);
 
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "", e);
             }
         }
 

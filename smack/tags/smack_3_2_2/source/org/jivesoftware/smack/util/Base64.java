@@ -1,5 +1,8 @@
 package org.jivesoftware.smack.util;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  * <p>Encodes and decodes to and from Base64 notation.</p>
  * <p>Homepage: <a href="http://iharder.net/base64">http://iharder.net/base64</a>.</p>
@@ -68,6 +71,7 @@ package org.jivesoftware.smack.util;
  */
 public class Base64
 {
+    private static final Logger LOGGER = Logger.getLogger(Base64.class.getName());
 
 /* ********  P U B L I C   F I E L D S  ******** */
 
@@ -572,7 +576,7 @@ public class Base64
         }   // end try
         catch( java.io.IOException e )
         {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
             return null;
         }   // end catch
         finally
@@ -701,7 +705,7 @@ public class Base64
             }   // end try
             catch( java.io.IOException e )
             {
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "", e);
                 return null;
             }   // end catch
             finally
@@ -1045,12 +1049,12 @@ public class Base64
         }   // end try
         catch( java.io.IOException e )
         {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
             obj = null;
         }   // end catch
         catch( java.lang.ClassNotFoundException e )
         {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
             obj = null;
         }   // end catch
         finally
@@ -1253,7 +1257,7 @@ public class Base64
             out.write( encoded.getBytes("US-ASCII") ); // Strict, 7-bit output.
         }   // end try
         catch( java.io.IOException ex ) {
-            ex.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", ex);
         }   // end catch
         finally {
             try { out.close(); }
@@ -1279,7 +1283,7 @@ public class Base64
             out.write( decoded );
         }   // end try
         catch( java.io.IOException ex ) {
-            ex.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", ex);
         }   // end catch
         finally {
             try { out.close(); }

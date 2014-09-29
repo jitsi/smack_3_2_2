@@ -34,6 +34,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * vCard provider.
@@ -42,6 +44,8 @@ import java.util.List;
  * @author Derek DeMoro
  */
 public class VCardProvider implements IQProvider {
+
+    private static final Logger LOGGER = Logger.getLogger(VCardProvider.class.getName());
 
     private static final String PREFERRED_ENCODING = "UTF-8";
 
@@ -71,10 +75,10 @@ public class VCardProvider implements IQProvider {
             }
         }
         catch (XmlPullParserException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
         }
         catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
         }
 
         String xmlText = sb.toString();

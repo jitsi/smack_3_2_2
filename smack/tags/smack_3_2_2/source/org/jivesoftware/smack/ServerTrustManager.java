@@ -29,6 +29,8 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,6 +43,8 @@ import java.util.regex.Pattern;
  * @author Gaston Dombiak
  */
 class ServerTrustManager implements X509TrustManager {
+
+    private static final Logger LOGGER = Logger.getLogger(ServerTrustManager.class.getName());
 
     private static Pattern cnPattern = Pattern.compile("(?i)(cn=)([^,]*)");
 
@@ -63,7 +67,7 @@ class ServerTrustManager implements X509TrustManager {
             trustStore.load(in, configuration.getTruststorePassword().toCharArray());
         }
         catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
             // Disable root CA checking
             configuration.setVerifyRootCAEnabled(false);
         }
@@ -138,7 +142,7 @@ class ServerTrustManager implements X509TrustManager {
                 }
             }
             catch (KeyStoreException e) {
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "", e);
             }
             if (!trusted) {
                 throw new CertificateException("root certificate not trusted of " + peerIdentities);
@@ -251,7 +255,7 @@ class ServerTrustManager implements X509TrustManager {
             }*/
         }
         catch (CertificateParsingException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
         }
         return identities;
     }

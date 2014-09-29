@@ -32,6 +32,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.jivesoftware.smack.debugger.SmackDebugger;
 import org.jivesoftware.smack.filter.PacketFilter;
@@ -78,6 +80,8 @@ import org.jivesoftware.smack.packet.Presence;
  * @author Guenther Niess
  */
 public abstract class Connection {
+
+    private static final Logger LOGGER = Logger.getLogger(Connection.class.getName());
 
     /** 
      * Counter to uniquely identify connections that are created.
@@ -743,7 +747,7 @@ public abstract class Connection {
                         debuggerClass = Class.forName(className);
                     }
                     catch (Exception e) {
-                        e.printStackTrace();
+                        LOGGER.log(Level.FINER, "", e);
                     }
                 }
                 if (debuggerClass == null) {
@@ -757,7 +761,7 @@ public abstract class Connection {
                                     Class.forName("org.jivesoftware.smack.debugger.LiteDebugger");
                         }
                         catch (Exception ex2) {
-                            ex2.printStackTrace();
+                            LOGGER.log(Level.FINER, "", ex2);
                         }
                     }
                 }

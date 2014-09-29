@@ -42,6 +42,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * An AdHocCommandManager is responsible for keeping the list of available
@@ -54,6 +56,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Gabriel Guardincerri
  */
 public class AdHocCommandManager {
+
+    private static final Logger LOGGER = Logger.getLogger(AdHocCommandManager.class.getName());
 
     private static final String DISCO_NAMESPACE = "http://jabber.org/protocol/commands";
 
@@ -499,7 +503,8 @@ public class AdHocCommandManager {
                     executingCommands.remove(sessionId);
                 }
                 respondError(response, error);
-                e.printStackTrace();
+
+                LOGGER.log(Level.SEVERE, "", e);
             }
         }
         else {
@@ -615,7 +620,7 @@ public class AdHocCommandManager {
                     }
                     respondError(response, error);
 
-                    e.printStackTrace();
+                    LOGGER.log(Level.SEVERE, "", e);
                 }
             }
         }
@@ -679,12 +684,12 @@ public class AdHocCommandManager {
             command.setNode(commandInfo.getNode());
         }
         catch (InstantiationException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
             throw new XMPPException(new XMPPError(
                     XMPPError.Condition.interna_server_error));
         }
         catch (IllegalAccessException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
             throw new XMPPException(new XMPPError(
                     XMPPError.Condition.interna_server_error));
         }

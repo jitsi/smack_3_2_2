@@ -29,11 +29,15 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Random;
 import java.util.TimeZone;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A collection of utility methods for String objects.
  */
 public class StringUtils {
+
+    private static final Logger LOGGER = Logger.getLogger(StringUtils.class.getName());
 
     /**
      * Date format as defined in XEP-0082 - XMPP Date and Time Profiles. The time zone is set to
@@ -462,7 +466,7 @@ public class StringUtils {
             bytes = data.getBytes("ISO-8859-1");
         }
         catch (UnsupportedEncodingException uee) {
-            uee.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", uee);
         }
         return encodeBase64(bytes);
     }

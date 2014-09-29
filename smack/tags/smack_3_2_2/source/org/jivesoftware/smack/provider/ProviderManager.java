@@ -29,6 +29,8 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Manages providers for parsing custom XML sub-documents of XMPP packets. Two types of
@@ -117,6 +119,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ProviderManager {
 
+    private static final Logger LOGGER = Logger.getLogger(ProviderManager.class.getName());
+
     private static ProviderManager instance;
 
     private Map<String, Object> extensionProviders = new ConcurrentHashMap<String, Object>();
@@ -200,7 +204,7 @@ public class ProviderManager {
                                             }
                                         }
                                         catch (ClassNotFoundException cnfe) {
-                                            cnfe.printStackTrace();
+                                            LOGGER.log(Level.SEVERE, "", cnfe);
                                         }
                                     }
                                 }
@@ -236,7 +240,7 @@ public class ProviderManager {
                                             }
                                         }
                                         catch (ClassNotFoundException cnfe) {
-                                            cnfe.printStackTrace();
+                                            LOGGER.log(Level.SEVERE, "", cnfe);
                                         }
                                     }
                                 }
@@ -257,7 +261,7 @@ public class ProviderManager {
             }
         }
         catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
         }
     }
 

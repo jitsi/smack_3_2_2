@@ -32,6 +32,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Allows creation and management of accounts on an XMPP server.
@@ -40,6 +42,8 @@ import java.util.Map;
  * @author Matt Tucker
  */
 public class AccountManager {
+
+    private static final Logger LOGGER = Logger.getLogger(AccountManager.class.getName());
 
     private Connection connection;
     private Registration info = null;
@@ -134,7 +138,7 @@ public class AccountManager {
             }
         }
         catch (XMPPException xe) {
-            xe.printStackTrace();
+            LOGGER.log(Level.INFO, "", xe);
         }
         return Collections.emptySet();
     }
@@ -155,7 +159,7 @@ public class AccountManager {
             return info.getAttributes().get(name);
         }
         catch (XMPPException xe) {
-            xe.printStackTrace();
+            LOGGER.log(Level.INFO, "", xe);
         }
         return null;
     }

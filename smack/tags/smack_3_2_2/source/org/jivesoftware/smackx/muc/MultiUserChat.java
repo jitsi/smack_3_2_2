@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.jivesoftware.smack.Chat;
 import org.jivesoftware.smack.ConnectionCreationListener;
@@ -75,6 +77,8 @@ import org.jivesoftware.smackx.packet.MUCUser;
  * @author Gaston Dombiak, Larry Kirschner
  */
 public class MultiUserChat {
+
+    private static final Logger LOGGER = Logger.getLogger(MultiUserChat.class.getName());
 
     private final static String discoNamespace = "http://jabber.org/protocol/muc";
     private final static String discoNode = "http://jabber.org/protocol/muc#rooms";
@@ -173,7 +177,7 @@ public class MultiUserChat {
             return result.containsFeature(discoNamespace);
         }
         catch (XMPPException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
             return false;
         }
     }
@@ -216,7 +220,7 @@ public class MultiUserChat {
             return answer.iterator();
         }
         catch (XMPPException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
             // Return an iterator on an empty collection
             return new ArrayList<String>().iterator();
         }
@@ -954,7 +958,7 @@ public class MultiUserChat {
             return null;
         }
         catch (XMPPException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
             return null;
         }
     }
@@ -2049,11 +2053,11 @@ public class MultiUserChat {
                 method.invoke(listener, params);
             }
         } catch (NoSuchMethodException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
         } catch (InvocationTargetException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
         }
     }
 
@@ -2100,11 +2104,11 @@ public class MultiUserChat {
                 method.invoke(listener, params.toArray());
             }
         } catch (NoSuchMethodException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
         } catch (InvocationTargetException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
         }
     }
 

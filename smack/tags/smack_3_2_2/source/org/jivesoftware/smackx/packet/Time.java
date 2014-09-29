@@ -27,6 +27,8 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A Time IQ packet, which is used by XMPP clients to exchange their respective local
@@ -61,6 +63,8 @@ import java.util.TimeZone;
  * @author Matt Tucker
  */
 public class Time extends IQ {
+
+    private static final Logger LOGGER = Logger.getLogger(Time.class.getName());
 
     private static SimpleDateFormat utcFormat = new SimpleDateFormat("yyyyMMdd'T'HH:mm:ss");
     private static DateFormat displayFormat = DateFormat.getDateTimeInstance();
@@ -109,7 +113,7 @@ public class Time extends IQ {
             date = cal.getTime();
         }
         catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "", e);
         }
         return date;
     }

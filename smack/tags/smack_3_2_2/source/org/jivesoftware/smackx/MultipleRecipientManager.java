@@ -33,6 +33,8 @@ import org.jivesoftware.smackx.packet.MultipleAddresses;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A MultipleRecipientManager allows to send packets to multiple recipients by making use of
@@ -42,6 +44,8 @@ import java.util.List;
  * @author Gaston Dombiak
  */
 public class MultipleRecipientManager {
+
+    private static final Logger LOGGER = Logger.getLogger(MultipleRecipientManager.class.getName());
 
     /**
      * Create a cache to hold the 100 most recently accessed elements for a period of
@@ -315,7 +319,7 @@ public class MultipleRecipientManager {
                         services.put(serviceName, serviceAddress == null ? "" : serviceAddress);
                     }
                     catch (XMPPException e) {
-                        e.printStackTrace();
+                        LOGGER.log(Level.SEVERE, "", e);
                     }
                 }
             }
