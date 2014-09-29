@@ -132,6 +132,7 @@ public class ProviderManager {
     public static synchronized ProviderManager getInstance() {
         if (instance == null) {
             instance = new ProviderManager();
+            instance.initialize();
         }
         return instance;
     }
@@ -429,10 +430,5 @@ public class ProviderManager {
             }
         }
         return loaders.toArray(new ClassLoader[loaders.size()]);
-    }
-
-    private ProviderManager() {
-        super();
-        initialize();
     }
 }
