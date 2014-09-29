@@ -363,7 +363,10 @@ public class MultiUserChat {
         // Look for confirmation of room creation from the server
         MUCUser mucUser = getMUCUserExtension(presence);
         if (mucUser != null && mucUser.getStatus() != null) {
-            if ("201".equals(mucUser.getStatus().getCode())) {
+            if ("201".equals(mucUser.getStatus().getCode())
+                || "210".equals(mucUser.getStatus().getCode())
+                || "100".equals(mucUser.getStatus().getCode())
+                || "110".equals(mucUser.getStatus().getCode())) {
                 // Room was created and the user has joined the room
                 return;
             }
