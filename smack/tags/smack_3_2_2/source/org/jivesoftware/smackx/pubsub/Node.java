@@ -515,7 +515,10 @@ abstract public class Node
 				{
 					List<PacketExtension> secondLevelList = ((EmbeddedPacketExtension)embedEvent).getExtensions();
 					
-					if (secondLevelList.size() > 0 && secondLevelList.get(0).getElementName().equals(secondElement))
+					// XEP-0060 allows no elements on second level  
+					if(secondLevelList.size() == 0)
+						return true;
+					else if (secondLevelList.size() > 0 && secondLevelList.get(0).getElementName().equals(secondElement))
 						return true;
 				}
 			}
