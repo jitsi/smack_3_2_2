@@ -30,6 +30,7 @@ import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.PacketExtension;
 import org.jivesoftware.smackx.packet.ChatStateExtension;
 
+import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -48,8 +49,8 @@ import java.util.WeakHashMap;
  */
 public class ChatStateManager {
 
-    private static final Map<Connection, ChatStateManager> managers =
-            new WeakHashMap<Connection, ChatStateManager>();
+    private static final Map<Connection, WeakReference<ChatStateManager>> managers =
+            new WeakHashMap<Connection, WeakReference<ChatStateManager>>();
 
     private static final PacketFilter filter = new NotFilter(
                 new PacketExtensionFilter("http://jabber.org/protocol/chatstates"));
@@ -66,12 +67,15 @@ public class ChatStateManager {
             return null;
         }
         synchronized (managers) {
-            ChatStateManager manager = managers.get(connection);
-            if (manager == null) {
+            ChatStateManager manager;
+            WeakReference<ChatStateManager> ref = managers.get(connection);
+            if (ref == null) {
                 manager = new ChatStateManager(connection);
                 manager.init();
-                managers.put(connection, manager);
+                managers.put(connection, new WeakReference<ChatStateManager>(manager));
             }
+            else
+                manager = ref.get();
 
             return manager;
         }
@@ -151,10 +155,10 @@ public class ChatStateManager {
         return false;
     }
 
-    private void fireNewChatState(Chat chat, ChatState state) {
+    private void fireNewChatState(Chat chat, ChatState state, Message message) {
         for (MessageListener listener : chat.getListeners()) {
             if (listener instanceof ChatStateListener) {
-                ((ChatStateListener) listener).stateChanged(chat, state);
+                ((ChatStateListener) listener).stateChanged(chat, state, message);
             }
         }
     }
@@ -194,7 +198,7 @@ public class ChatStateManager {
                 return;
             }
 
-            fireNewChatState(chat, state);
+            fireNewChatState(chat, state, message);
         }
     }
 }
