@@ -109,7 +109,7 @@
             </classpath>
         </javac>		
 		<mkdir dir="${compile.dir}/jingle/extension" />
-		<javac
+		<!--javac
             destdir="${compile.dir}/jingle/extension"
             includeAntRuntime="no"
             debug="on"
@@ -129,7 +129,7 @@
                 </fileset>
 				<pathelement path="${compile.dir}"/>
             </classpath>
-        </javac>		
+        </javac-->		
     </target>
 
     <!-- compile-test -->
@@ -167,8 +167,8 @@
             includes="org/jivesoftware/smack/**/*.class, **/smack-config.xml">
             <zipfileset src="${merge.lib.dir}/xpp.jar"/>
         </jar>
-    	<taskdef resource="aQute/bnd/ant/taskdef.properties" classpath="${basedir}/build/build/biz.aQute.bnd.jar"/>
-    	<bndwrap jars="${jar.dest.dir}/smack.jar" output="${jar.dest.dir}/smack.jar" />
+    	<!--taskdef resource="aQute/bnd/ant/taskdef.properties" classpath="${basedir}/build/build/biz.aQute.bnd.jar"/-->
+    	<!--bndwrap jars="${jar.dest.dir}/smack.jar" output="${jar.dest.dir}/smack.jar" /-->
         <jar file="${jar.dest.dir}/smack.jar" update="true">
             <manifest>
                 <attribute name="Bundle-SymbolicName" value="org.igniterealtime.smack" />
@@ -184,7 +184,7 @@
             </manifest>
             <zipfileset src="${merge.lib.dir}/jzlib.jar"/>
         </jar>
-    	<bndwrap jars="${jar.dest.dir}/smackx.jar" output="${jar.dest.dir}/smackx.jar" />
+    	<!--bndwrap jars="${jar.dest.dir}/smackx.jar" output="${jar.dest.dir}/smackx.jar" /-->
         <jar file="${jar.dest.dir}/smackx.jar" update="true">
             <manifest>
                 <attribute name="Bundle-SymbolicName" value="org.igniterealtime.smack-ext" />
@@ -202,13 +202,13 @@
                 <attribute name="Class-Path" value="smack.jar" />
             </manifest>
         </jar>
-    	<bndwrap jars="${jar.dest.dir}/smackx-debug.jar" output="${jar.dest.dir}/smackx-debug.jar" />
+    	<!--bndwrap jars="${jar.dest.dir}/smackx-debug.jar" output="${jar.dest.dir}/smackx-debug.jar" /-->
         <jar file="${jar.dest.dir}/smackx-debug.jar" update="true">
             <manifest>
                 <attribute name="Bundle-SymbolicName" value="org.igniterealtime.smack-ext-debug" />
             </manifest>
         </jar>
-		<jar destfile="${jar.dest.dir}/smackx-jingle.jar"
+		<!--jar destfile="${jar.dest.dir}/smackx-jingle.jar"
             basedir="${compile.dir}/jingle/extension"
             includes="org/jivesoftware/smackx/**/*.class">
             <manifest>
@@ -221,7 +221,7 @@
             <manifest>
                 <attribute name="Bundle-SymbolicName" value="org.igniterealtime.smack-ext-jingle" />
             </manifest>
-        </jar>
+        </jar-->
         <delete file="${compile.dir}/META-INF/smack-config.xml" />
         <delete file="${compile.dir}/META-INF/smack.providers" />
         <delete>
