@@ -333,7 +333,7 @@ public class PacketParserUtils {
                 iqPacket.setTo(from);
                 iqPacket.setFrom(to);
                 iqPacket.setType(IQ.Type.ERROR);
-                iqPacket.setError(new XMPPError(XMPPError.Condition.feature_not_implemented));
+                iqPacket.setError(new XMPPError(XMPPError.Condition.service_unavailable));
                 connection.sendPacket(iqPacket);
                 return null;
             }
