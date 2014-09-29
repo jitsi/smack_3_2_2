@@ -27,6 +27,7 @@ import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.RosterPacket;
+import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.util.StringUtils;
 
 import java.util.*;
@@ -657,6 +658,15 @@ public class Roster {
     }
 
     /**
+     * Fires roster error event to roster listeners indicating that an error occurred.
+     */
+    private void fireRosterChangedEvent(XMPPError error, Packet packet) {
+        for (RosterListener listener : rosterListeners) {
+            listener.rosterError(error, packet);
+        }
+    }
+
+    /**
      * Fires roster presence changed event to roster listeners.
      *
      * @param presence the presence change.
@@ -814,6 +824,12 @@ public class Roster {
     private class RosterPacketListener implements PacketListener {
 
         public void processPacket(Packet packet) {
+            if (packet.getError() != null)
+            {
+                fireRosterChangedEvent(packet.getError(), packet);
+                return;
+            }
+
             // Keep a registry of the entries that were added, deleted or updated. An event
             // will be fired for each affected entry
             Collection<String> addedEntries = new ArrayList<String>();

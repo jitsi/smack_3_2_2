@@ -20,7 +20,9 @@
 
 package org.jivesoftware.smack;
 
+import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.packet.XMPPError;
 
 import java.util.Collection;
 
@@ -80,4 +82,11 @@ public interface RosterListener {
      * @see Roster#getPresence(String)
      */
     public void presenceChanged(Presence presence);
+
+    /**
+     * Notifies for errors in roster packets.
+     * @param error the error.
+     * @param packet the source packet containing the error.
+     */
+    public void rosterError(XMPPError error, Packet packet);
 }
