@@ -78,6 +78,11 @@ public class XMPPConnection extends Connection {
     Roster roster = null;
 
     /**
+     * Custom SSL Context to inject TrustStore, KeyManager and TrustManager.
+     */
+    private SSLContext customSslContext = null;
+
+    /**
      * Collection of available stream compression methods offered by the server.
      */
     private Collection<String> compressionMethods;
@@ -183,6 +188,16 @@ public class XMPPConnection extends Connection {
         }
         return user;
     }
+
+     /**
+      * Set custom SSL Context.
+      *
+      * @param customSslContext the custom SSL context to use for new connections.
+      */
+     public void setCustomSslContext(SSLContext customSslContext)
+     {
+         this.customSslContext = customSslContext;
+     }
 
     @Override
     public synchronized void login(String username, String password, String resource) throws XMPPException {
@@ -728,7 +743,6 @@ public class XMPPConnection extends Connection {
      * @throws Exception if an exception occurs.
      */
     void proceedTLSReceived() throws Exception {
-        SSLContext context = SSLContext.getInstance("TLS");
         KeyStore ks = null;
         KeyManager[] kms = null;
         PasswordCallback pcb = null;
@@ -791,13 +805,22 @@ public class XMPPConnection extends Connection {
         }
 
         // Verify certificate presented by the server
-        context.init(kms,
-                new javax.net.ssl.TrustManager[]{new ServerTrustManager(getServiceName(), config)},
-                new java.security.SecureRandom());
+        SSLContext context;
+        if(customSslContext == null) {
+            context = SSLContext.getInstance("TLS");
+            context.init(kms,
+                    new javax.net.ssl.TrustManager[]{
+                            new ServerTrustManager(getServiceName(), config)},
+                    new java.security.SecureRandom());
+        }
+        else {
+             context = customSslContext;
+        }
+
         Socket plain = socket;
         // Secure the plain connection
         socket = context.getSocketFactory().createSocket(plain,
-                plain.getInetAddress().getHostName(), plain.getPort(), true);
+                plain.getInetAddress().getHostAddress(), plain.getPort(), true);
         socket.setSoTimeout(0);
         socket.setKeepAlive(true);
         // Initialize the reader and writer with the new secured version
@@ -981,5 +1004,14 @@ public class XMPPConnection extends Connection {
         if (!this.wasAuthenticated) {
             this.wasAuthenticated = wasAuthenticated;
         }
+    }
+
+    /**
+     * The currently used socket.
+     * @return the currently used socket.
+     */
+    public Socket getSocket()
+    {
+        return socket;
     }
 }
