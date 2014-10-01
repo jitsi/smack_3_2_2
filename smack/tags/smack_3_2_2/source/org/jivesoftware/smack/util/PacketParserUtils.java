@@ -188,7 +188,7 @@ public class PacketParserUtils {
                 type = Presence.Type.valueOf(typeString);
             }
             catch (IllegalArgumentException iae) {
-                System.err.println("Found invalid presence type " + typeString);
+                LOGGER.log(Level.SEVERE, "Found invalid presence type " + typeString);
             }
         }
         Presence presence = new Presence(type);
@@ -211,7 +211,13 @@ public class PacketParserUtils {
                 String elementName = parser.getName();
                 String namespace = parser.getNamespace();
                 if (elementName.equals("status")) {
-                    presence.setStatus(parser.nextText());
+                    try {
+                        presence.setStatus(parser.nextText());
+                    }
+                    catch (Throwable t)
+                    {
+                        LOGGER.log(Level.SEVERE, "Error parsing presence status", t);
+                    }
                 }
                 else if (elementName.equals("priority")) {
                     try {
@@ -232,7 +238,7 @@ public class PacketParserUtils {
                         presence.setMode(Presence.Mode.valueOf(modeText));
                     }
                     catch (IllegalArgumentException iae) {
-                        System.err.println("Found invalid presence mode " + modeText);
+                        LOGGER.log(Level.SEVERE, "Found invalid presence mode " + modeText);
                     }
                 }
                 else if (elementName.equals("error")) {
