@@ -25,6 +25,7 @@ import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.util.StringUtils;
+import org.jivesoftware.smack.util.TLSUtils;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -80,11 +81,6 @@ public class XMPPConnection extends Connection {
     PacketReader packetReader;
 
     Roster roster = null;
-
-    /**
-     * Custom SSL Context to inject TrustStore, KeyManager and TrustManager.
-     */
-    private SSLContext customSslContext = null;
 
     /**
      * Collection of available stream compression methods offered by the server.
@@ -192,16 +188,6 @@ public class XMPPConnection extends Connection {
         }
         return user;
     }
-
-     /**
-      * Set custom SSL Context.
-      *
-      * @param customSslContext the custom SSL context to use for new connections.
-      */
-     public void setCustomSslContext(SSLContext customSslContext)
-     {
-         this.customSslContext = customSslContext;
-     }
 
     @Override
     public synchronized void login(String username, String password, String resource) throws XMPPException {
@@ -809,16 +795,13 @@ public class XMPPConnection extends Connection {
         }
 
         // Verify certificate presented by the server
-        SSLContext context;
-        if(customSslContext == null) {
+        SSLContext context = config.getCustomSSLContext();
+        if(context == null) {
             context = SSLContext.getInstance("TLS");
             context.init(kms,
                     new javax.net.ssl.TrustManager[]{
                             new ServerTrustManager(getServiceName(), config)},
                     new java.security.SecureRandom());
-        }
-        else {
-             context = customSslContext;
         }
 
         Socket plain = socket;
@@ -829,8 +812,13 @@ public class XMPPConnection extends Connection {
         socket.setKeepAlive(true);
         // Initialize the reader and writer with the new secured version
         initReaderAndWriter();
+
+        final SSLSocket sslSocket = (SSLSocket) socket;
+        TLSUtils.setEnabledProtocolsAndCiphers(sslSocket,
+                config.getEnabledSSLProtocols(), config.getEnabledSSLCiphers());
+
         // Proceed to do the handshake
-        ((SSLSocket) socket).startHandshake();
+        sslSocket.startHandshake();
         //if (((SSLSocket) socket).getWantClientAuth()) {
         //    System.err.println("Connection wants client auth");
         //}

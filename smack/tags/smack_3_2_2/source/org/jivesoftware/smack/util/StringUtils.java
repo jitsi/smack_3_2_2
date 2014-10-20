@@ -26,6 +26,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Random;
 import java.util.TimeZone;
@@ -558,5 +559,17 @@ public class StringUtils {
 
     private StringUtils() {
         // Not instantiable.
+    }
+
+    public static String collectionToString(Collection<String> collection) {
+        StringBuilder sb = new StringBuilder();
+        for (String s : collection) {
+            sb.append(s);
+            sb.append(" ");
+        }
+        String res = sb.toString();
+        // Remove the trailing whitespace
+        res = res.substring(0, res.length() - 1);
+        return res;
     }
 }

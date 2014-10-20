@@ -24,6 +24,7 @@ import org.jivesoftware.smack.proxy.ProxyInfo;
 import org.jivesoftware.smack.util.DNSUtil;
 
 import javax.net.SocketFactory;
+import javax.net.ssl.SSLContext;
 import javax.security.auth.callback.CallbackHandler;
 import java.io.File;
 
@@ -54,6 +55,7 @@ public class ConnectionConfiguration implements Cloneable {
     private String keystorePath;
     private String keystoreType;
     private String pkcs11Library;
+    private SSLContext customSSLContext;
     private boolean verifyChainEnabled = false;
     private boolean verifyRootCAEnabled = false;
     private boolean selfSignedCertificateEnabled = false;
@@ -83,8 +85,18 @@ public class ConnectionConfiguration implements Cloneable {
     private boolean sendPresence = true;
     private boolean rosterLoadedAtLogin = true;
     private SecurityMode securityMode = SecurityMode.enabled;
-	
-	// Holds the proxy information (such as proxyhost, proxyport, username, password etc)
+
+    /**
+     *
+     */
+    private String[] enabledSSLProtocols;
+
+    /**
+     *
+     */
+    private String[] enabledSSLCiphers;
+
+    // Holds the proxy information (such as proxyhost, proxyport, username, password etc)
     protected ProxyInfo proxy;
 
     /**
@@ -380,6 +392,65 @@ public class ConnectionConfiguration implements Cloneable {
      */
     public void setPKCS11Library(String pkcs11Library) {
         this.pkcs11Library = pkcs11Library;
+    }
+
+    /**
+     * Gets the custom SSLContext previously set with {@link #setCustomSSLContext(javax.net.ssl.SSLContext)} for
+     * SSL sockets. This is null by default.
+     *
+     * @return the custom SSLContext or null.
+     */
+    public SSLContext getCustomSSLContext() {
+        return this.customSSLContext;
+    }
+
+    /**
+     * Sets a custom SSLContext for creating SSL sockets.
+     * <p>
+     * For more information on how to create a SSLContext see <a href=
+     * "http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#X509TrustManager"
+     * >Java Secure Socket Extension (JSEE) Reference Guide: Creating Your Own X509TrustManager</a>
+     *
+     * @param context the custom SSLContext for new sockets
+     */
+    public void setCustomSSLContext(SSLContext context) {
+        this.customSSLContext = context;
+    }
+
+    /**
+     * Set the enabled SSL/TLS protocols.
+     *
+     * @param enabledSSLProtocols
+     */
+    public void setEnabledSSLProtocols(String[] enabledSSLProtocols) {
+        this.enabledSSLProtocols = enabledSSLProtocols;
+    }
+
+    /**
+     * Return the enabled SSL/TLS protocols.
+     *
+     * @return the enabled SSL/TLS protocols
+     */
+    public String[] getEnabledSSLProtocols() {
+        return enabledSSLProtocols;
+    }
+
+    /**
+     * Set the enabled SSL/TLS ciphers.
+     *
+     * @param enabledSSLCiphers the enabled SSL/TLS ciphers
+     */
+    public void setEnabledSSLCiphers(String[] enabledSSLCiphers) {
+        this.enabledSSLCiphers = enabledSSLCiphers;
+    }
+
+    /**
+     * Return the enabled SSL/TLS ciphers.
+     *
+     * @return the enabled SSL/TLS ciphers
+     */
+    public String[] getEnabledSSLCiphers() {
+        return enabledSSLCiphers;
     }
 
     /**
