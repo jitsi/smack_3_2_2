@@ -813,8 +813,13 @@ public abstract class Connection {
          * @param packet the packet which was sent or received.
          */
         public void notifyListener(Packet packet) {
-            if (packetFilter == null || packetFilter.accept(packet)) {
-                packetListener.processPacket(packet);
+            try {
+                if (packetFilter == null || packetFilter.accept(packet))
+                {
+                    packetListener.processPacket(packet);
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, e.getMessage(), e);
             }
         }
     }
