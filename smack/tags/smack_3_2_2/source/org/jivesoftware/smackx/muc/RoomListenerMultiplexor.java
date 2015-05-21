@@ -143,6 +143,16 @@ class RoomListenerMultiplexor implements ConnectionListener {
     private void cancel() {
         connection.removeConnectionListener(this);
         connection.removePacketListener(listener);
+        // Remove this instance from 'monitors' as it will become useless
+        // after reconnection. We have removed packet listeners and method
+        // init() will never be called again, so no packets will be processed.
+        synchronized (monitors) {
+            WeakReference<RoomListenerMultiplexor> listenerRef
+                = monitors.get(connection);
+            if (listenerRef.get() == this){
+                monitors.remove(connection);
+            }
+        }
     }
 
     /**
