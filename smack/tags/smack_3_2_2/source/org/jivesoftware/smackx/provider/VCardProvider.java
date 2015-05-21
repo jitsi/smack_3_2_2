@@ -28,8 +28,8 @@ import org.w3c.dom.*;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.*;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,6 +48,47 @@ public class VCardProvider implements IQProvider {
     private static final Logger LOGGER = Logger.getLogger(VCardProvider.class.getName());
 
     private static final String PREFERRED_ENCODING = "UTF-8";
+    private static final DocumentBuilderFactory DOCUMENT_BUILDER_FACTORY;
+
+    static {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        try {
+            documentBuilderFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        } catch (ParserConfigurationException e) {
+            LOGGER.log(Level.WARNING, "Could not disallow doctype decl", e);
+    
+            // If we can't disable DTDs, then at least try the following
+            // Xerces 1 - http://xerces.apache.org/xerces-j/features.html#external-general-entities
+            // Xerces 2 - http://xerces.apache.org/xerces2-j/features.html#external-general-entities
+            try {
+                documentBuilderFactory.setFeature( "http://xml.org/sax/features/external-general-entities", false);
+            } catch (ParserConfigurationException e1) {
+                LOGGER.log(Level.WARNING, "Could not disallow doctype decl", e1);
+            }
+            try {
+                documentBuilderFactory.setFeature( "http://xml.org/sax/features/external-parameter-entities", false);
+            } catch (ParserConfigurationException e1) {
+                LOGGER.log(Level.WARNING, "Could not disallow doctype decl", e1);
+            }
+        }
+        documentBuilderFactory.setXIncludeAware(false);
+        documentBuilderFactory.setExpandEntityReferences(false);
+    
+        // Harden the parser even further
+        documentBuilderFactory.setIgnoringComments(true);
+        documentBuilderFactory.setCoalescing(false);
+        documentBuilderFactory.setValidating(false);
+    
+        try {
+            documentBuilderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        } catch (ParserConfigurationException e) {
+            LOGGER.log(Level.SEVERE, "Could not enable secure processing parsing feature, VCard provider will not work", e);
+            documentBuilderFactory = null;
+        }
+    
+        DOCUMENT_BUILDER_FACTORY = documentBuilderFactory;
+    }
+
 
     public IQ parseIQ(XmlPullParser parser) throws Exception {
         final StringBuilder sb = new StringBuilder();
@@ -95,8 +136,7 @@ public class VCardProvider implements IQProvider {
     public static VCard createVCardFromXML(String xml) throws Exception {
         VCard vCard = new VCard();
 
-        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+        DocumentBuilder documentBuilder = DOCUMENT_BUILDER_FACTORY.newDocumentBuilder();
         Document document = documentBuilder.parse(
                 new ByteArrayInputStream(xml.getBytes(PREFERRED_ENCODING)));
 
