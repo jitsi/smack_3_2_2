@@ -2537,15 +2537,24 @@ public class MultiUserChat {
         }
     }
 
+    /**
+     * Releases all resources and prepares this instance for garbage collection.
+     * Do not call when still in the room.
+     */
+    public void dispose() {
+        if (connection == null || roomListenerMultiplexor == null)
+            return;
+
+        roomListenerMultiplexor.removeRoom(room);
+        // Remove all the PacketListeners added to the connection by this chat
+        for (PacketListener connectionListener : connectionListeners) {
+            connection.removePacketListener(connectionListener);
+        }
+    }
+
     protected void finalize() throws Throwable {
         try {
-            if (connection != null) {
-                roomListenerMultiplexor.removeRoom(room);
-                // Remove all the PacketListeners added to the connection by this chat
-                for (PacketListener connectionListener : connectionListeners) {
-                    connection.removePacketListener(connectionListener);
-                }
-            }
+            dispose();
         }
         catch (Exception e) {
             // Do nothing
