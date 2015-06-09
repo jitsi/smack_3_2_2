@@ -2541,7 +2541,7 @@ public class MultiUserChat {
      * Releases all resources and prepares this instance for garbage collection.
      * Do not call when still in the room.
      */
-    public void dispose() {
+    public synchronized void dispose() {
         if (connection == null || roomListenerMultiplexor == null)
             return;
 
@@ -2550,6 +2550,9 @@ public class MultiUserChat {
         for (PacketListener connectionListener : connectionListeners) {
             connection.removePacketListener(connectionListener);
         }
+
+        connection = null;
+        roomListenerMultiplexor = null;
     }
 
     protected void finalize() throws Throwable {

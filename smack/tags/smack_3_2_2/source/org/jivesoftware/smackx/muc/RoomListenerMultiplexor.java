@@ -97,6 +97,10 @@ class RoomListenerMultiplexor implements ConnectionListener {
     }
 
     public void addRoom(String address, PacketMultiplexListener roomListener) {
+        if (filter.roomAddressTable.containsKey(address)) {
+            throw new IllegalStateException(
+                "Room for " + address + " already exists!");
+        }
         filter.addRoom(address);
         listener.addRoom(address, roomListener);
     }
