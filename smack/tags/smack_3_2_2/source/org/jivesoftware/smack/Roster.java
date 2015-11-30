@@ -765,6 +765,11 @@ public class Roster {
                 if (entry != null) {
                     fireRosterPresenceEvent(presence);
                 }
+                else {
+                    // this is presence is not for any entry from the roaster
+                    // so we do not want to keep it (it can be for a muc room participant)
+                    presenceMap.remove(key);
+                }
             }
             else if (presence.getType() == Presence.Type.subscribe) {
                 if (subscriptionMode == SubscriptionMode.accept_all) {
