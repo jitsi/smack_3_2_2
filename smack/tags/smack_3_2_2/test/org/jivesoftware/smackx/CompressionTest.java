@@ -21,7 +21,7 @@
 package org.jivesoftware.smackx;
 
 import org.jivesoftware.smack.*;
-import org.jivesoftware.smack.filter.PacketIDFilter;
+import org.jivesoftware.smack.filter.IQReplyFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.test.SmackTestCase;
 import org.jivesoftware.smackx.packet.Version;
@@ -62,7 +62,8 @@ public class CompressionTest extends SmackTestCase {
         version.setTo(getServiceName());
 
         // Create a packet collector to listen for a response.
-        PacketCollector collector = connection.createPacketCollector(new PacketIDFilter(version.getPacketID()));
+        PacketCollector collector = connection.createPacketCollector(
+                new IQReplyFilter(version, connection));
 
         connection.sendPacket(version);
 

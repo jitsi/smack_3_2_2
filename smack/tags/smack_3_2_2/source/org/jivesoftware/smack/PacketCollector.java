@@ -21,6 +21,7 @@
 package org.jivesoftware.smack;
 
 import org.jivesoftware.smack.filter.PacketFilter;
+import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
 
 import java.util.LinkedList;
@@ -202,5 +203,49 @@ public class PacketCollector {
             // Notify waiting threads a result is available.
             notifyAll();
         }
+    }
+
+    /**
+     * Returns the next available packet. The method call will block until a stanza(/packet) is available or
+     * the connections reply timeout has elapsed. If the timeout elapses without a result,
+     * <tt>null</tt> will be returned. This method does also cancel the PacketCollector.
+     *
+     * @return the next available packet.
+     * @throws XMPPException in case an error response.
+     * @throws SmackException.NoResponseException if there was no response from the server.
+     * @throws InterruptedException
+     * @throws SmackException.NotConnectedException
+     */
+    public <P extends Packet> P nextResultOrThrow()
+        throws XMPPException
+    {
+        return nextResultOrThrow(SmackConfiguration.getPacketReplyTimeout());
+    }
+
+    /**
+     * Returns the next available packet. The method call will block until a stanza(/packet) is available or
+     * the <tt>timeout</tt> has elapsed. This method does also cancel the PacketCollector.
+     *
+     * @param timeout the amount of time to wait for the next stanza(/packet) (in milleseconds).
+     * @return the next available packet.
+     * @throws SmackException.NoResponseException if there was no response from the server.
+     * @throws XMPPException in case an error response.
+     * @throws InterruptedException
+     * @throws SmackException.NotConnectedException
+     */
+    public <P extends Packet> P nextResultOrThrow(long timeout)
+        throws XMPPException
+    {
+        P result = (P) nextResult(timeout);
+        cancel();
+        if (result == null) {
+            throw new XMPPException("No response from server.");
+        }
+        // If the server replied with an error, throw an exception.
+        else if (result.getError() != null) {
+            throw new XMPPException(result.getError());
+        }
+
+        return result;
     }
 }

@@ -24,7 +24,7 @@ import org.jivesoftware.smack.PacketCollector;
 import org.jivesoftware.smack.SmackConfiguration;
 import org.jivesoftware.smack.Connection;
 import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.filter.PacketIDFilter;
+import org.jivesoftware.smack.filter.IQReplyFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smackx.Form;
@@ -152,7 +152,7 @@ public class RemoteCommand extends AdHocCommand {
         }
 
         PacketCollector collector = connection.createPacketCollector(
-                new PacketIDFilter(data.getPacketID()));
+            new IQReplyFilter(data, connection));
 
         connection.sendPacket(data);
 

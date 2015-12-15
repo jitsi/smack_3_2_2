@@ -141,7 +141,7 @@ public class OfflineMessageManager {
             request.addItem(item);
         }
         // Filter packets looking for an answer from the server.
-        PacketFilter responseFilter = new PacketIDFilter(request.getPacketID());
+        PacketFilter responseFilter = new IQReplyFilter(request, connection);
         PacketCollector response = connection.createPacketCollector(responseFilter);
         // Filter offline messages that were requested by this request
         PacketFilter messageFilter = new AndFilter(packetFilter, new PacketFilter() {
@@ -192,27 +192,11 @@ public class OfflineMessageManager {
         List<Message> messages = new ArrayList<Message>();
         OfflineMessageRequest request = new OfflineMessageRequest();
         request.setFetch(true);
-        // Filter packets looking for an answer from the server.
-        PacketFilter responseFilter = new PacketIDFilter(request.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Filter offline messages that were requested by this request
-        PacketCollector messageCollector = connection.createPacketCollector(packetFilter);
-        // Send the retrieval request to the server.
-        connection.sendPacket(request);
-        // Wait up to a certain number of seconds for a reply.
-        IQ answer = (IQ) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
 
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        } else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
+        PacketCollector messageCollector = connection.createPacketCollectorAndSend(request);
+        Message message = messageCollector.nextResultOrThrow();
 
         // Collect the received offline messages
-        Message message = (Message) messageCollector.nextResult(
-                SmackConfiguration.getPacketReplyTimeout());
         while (message != null) {
             messages.add(message);
             message =
@@ -239,21 +223,7 @@ public class OfflineMessageManager {
             item.setAction("remove");
             request.addItem(item);
         }
-        // Filter packets looking for an answer from the server.
-        PacketFilter responseFilter = new PacketIDFilter(request.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the deletion request to the server.
-        connection.sendPacket(request);
-        // Wait up to a certain number of seconds for a reply.
-        IQ answer = (IQ) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
-
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        } else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
+        connection.createPacketCollectorAndSend(request).nextResultOrThrow();
     }
 
     /**
@@ -265,20 +235,6 @@ public class OfflineMessageManager {
     public void deleteMessages() throws XMPPException {
         OfflineMessageRequest request = new OfflineMessageRequest();
         request.setPurge(true);
-        // Filter packets looking for an answer from the server.
-        PacketFilter responseFilter = new PacketIDFilter(request.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the deletion request to the server.
-        connection.sendPacket(request);
-        // Wait up to a certain number of seconds for a reply.
-        IQ answer = (IQ) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
-
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        } else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
+        connection.createPacketCollectorAndSend(request).nextResultOrThrow();
     }
 }

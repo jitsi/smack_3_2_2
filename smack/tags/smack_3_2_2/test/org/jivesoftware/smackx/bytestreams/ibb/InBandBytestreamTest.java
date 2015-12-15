@@ -21,14 +21,10 @@ import java.util.concurrent.SynchronousQueue;
 import org.jivesoftware.smack.Connection;
 import org.jivesoftware.smack.PacketCollector;
 import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.filter.PacketIDFilter;
+import org.jivesoftware.smack.filter.IQReplyFilter;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.test.SmackTestCase;
-import org.jivesoftware.smackx.bytestreams.ibb.InBandBytestreamListener;
-import org.jivesoftware.smackx.bytestreams.ibb.InBandBytestreamManager;
-import org.jivesoftware.smackx.bytestreams.ibb.InBandBytestreamRequest;
-import org.jivesoftware.smackx.bytestreams.ibb.InBandBytestreamSession;
 import org.jivesoftware.smackx.bytestreams.ibb.InBandBytestreamManager.StanzaType;
 import org.jivesoftware.smackx.bytestreams.ibb.packet.Open;
 
@@ -61,8 +57,9 @@ public class InBandBytestreamTest extends SmackTestCase {
         open.setFrom(initiatorConnection.getUser());
         open.setTo(targetConnection.getUser());
 
-        PacketCollector collector = initiatorConnection.createPacketCollector(new PacketIDFilter(
-                        open.getPacketID()));
+        PacketCollector collector = initiatorConnection.createPacketCollector(
+                new IQReplyFilter(open, getConnection(0)));
+
         initiatorConnection.sendPacket(open);
         Packet result = collector.nextResult();
 

@@ -20,10 +20,7 @@
 
 package org.jivesoftware.smack;
 
-import org.jivesoftware.smack.filter.AndFilter;
-import org.jivesoftware.smack.filter.PacketFilter;
-import org.jivesoftware.smack.filter.PacketIDFilter;
-import org.jivesoftware.smack.filter.PacketTypeFilter;
+import org.jivesoftware.smack.filter.*;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.test.SmackTestCase;
 import org.jivesoftware.smackx.packet.Version;
@@ -53,7 +50,7 @@ public class IQTest extends SmackTestCase {
             }
         };
 
-        PacketFilter filter = new AndFilter(new PacketIDFilter(iq.getPacketID()),
+        PacketFilter filter = new AndFilter(new IQReplyFilter(iq, getConnection(0))),
                 new PacketTypeFilter(IQ.class));
         PacketCollector collector = getConnection(0).createPacketCollector(filter);
         // Send the iq packet with an invalid namespace
@@ -86,7 +83,7 @@ public class IQTest extends SmackTestCase {
 
         // Create a packet collector to listen for a response.
         PacketCollector collector = getConnection(0).createPacketCollector(
-                       new PacketIDFilter(versionRequest.getPacketID()));
+                       new IQReplyFilter(versionRequest, getConnection(0)));
 
         getConnection(0).sendPacket(versionRequest);
 

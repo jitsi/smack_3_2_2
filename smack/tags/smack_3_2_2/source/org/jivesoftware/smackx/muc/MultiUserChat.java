@@ -49,7 +49,6 @@ import org.jivesoftware.smack.filter.FromMatchesFilter;
 import org.jivesoftware.smack.filter.MessageTypeFilter;
 import org.jivesoftware.smack.filter.PacketExtensionFilter;
 import org.jivesoftware.smack.filter.PacketFilter;
-import org.jivesoftware.smack.filter.PacketIDFilter;
 import org.jivesoftware.smack.filter.PacketTypeFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
@@ -560,23 +559,7 @@ public class MultiUserChat {
         iq.setTo(room);
         iq.setType(IQ.Type.GET);
 
-        // Filter packets looking for an answer from the server.
-        PacketFilter responseFilter = new PacketIDFilter(iq.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Request the configuration form to the server.
-        connection.sendPacket(iq);
-        // Wait up to a certain number of seconds for a reply.
-        IQ answer = (IQ) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
-
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
-        return Form.getFormFrom(answer);
+        return Form.getFormFrom(connection.createPacketCollectorAndSend(iq).nextResultOrThrow());
     }
 
     /**
@@ -593,22 +576,7 @@ public class MultiUserChat {
         iq.setType(IQ.Type.SET);
         iq.addExtension(form.getDataFormToSend());
 
-        // Filter packets looking for an answer from the server.
-        PacketFilter responseFilter = new PacketIDFilter(iq.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the completed configuration form to the server.
-        connection.sendPacket(iq);
-        // Wait up to a certain number of seconds for a reply.
-        IQ answer = (IQ) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
-
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
+        connection.createPacketCollectorAndSend(iq).nextResultOrThrow();
     }
 
     /**
@@ -630,19 +598,7 @@ public class MultiUserChat {
         reg.setType(IQ.Type.GET);
         reg.setTo(room);
 
-        PacketFilter filter =
-            new AndFilter(new PacketIDFilter(reg.getPacketID()), new PacketTypeFilter(IQ.class));
-        PacketCollector collector = connection.createPacketCollector(filter);
-        connection.sendPacket(reg);
-        IQ result = (IQ) collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        collector.cancel();
-        if (result == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (result.getType() == IQ.Type.ERROR) {
-            throw new XMPPException(result.getError());
-        }
-        return Form.getFormFrom(result);
+        return Form.getFormFrom(connection.createPacketCollectorAndSend(reg).nextResultOrThrow());
     }
 
     /**
@@ -665,18 +621,7 @@ public class MultiUserChat {
         reg.setTo(room);
         reg.addExtension(form.getDataFormToSend());
 
-        PacketFilter filter =
-            new AndFilter(new PacketIDFilter(reg.getPacketID()), new PacketTypeFilter(IQ.class));
-        PacketCollector collector = connection.createPacketCollector(filter);
-        connection.sendPacket(reg);
-        IQ result = (IQ) collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        collector.cancel();
-        if (result == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (result.getType() == IQ.Type.ERROR) {
-            throw new XMPPException(result.getError());
-        }
+        connection.createPacketCollectorAndSend(reg).nextResultOrThrow();
     }
 
     /**
@@ -702,22 +647,8 @@ public class MultiUserChat {
         destroy.setJid(alternateJID);
         iq.setDestroy(destroy);
 
-        // Wait for a presence packet back from the server.
-        PacketFilter responseFilter = new PacketIDFilter(iq.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the room destruction request.
-        connection.sendPacket(iq);
-        // Wait up to a certain number of seconds for a reply.
-        IQ answer = (IQ) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
+        connection.createPacketCollectorAndSend(iq).nextResultOrThrow();
 
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
         // Reset occupant information.
         occupantsMap.clear();
         nickname = null;
@@ -1382,22 +1313,7 @@ public class MultiUserChat {
         item.setJid(jid);
         iq.addItem(item);
 
-        // Wait for a response packet back from the server.
-        PacketFilter responseFilter = new PacketIDFilter(iq.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the change request to the server.
-        connection.sendPacket(iq);
-        // Wait up to a certain number of seconds for a reply.
-        IQ answer = (IQ) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
-
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
+        connection.createPacketCollectorAndSend(iq).nextResultOrThrow();
     }
 
     private void changeAffiliationByOwner(Collection<String> jids, String affiliation)
@@ -1412,22 +1328,7 @@ public class MultiUserChat {
             iq.addItem(item);
         }
 
-        // Wait for a response packet back from the server.
-        PacketFilter responseFilter = new PacketIDFilter(iq.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the change request to the server.
-        connection.sendPacket(iq);
-        // Wait up to a certain number of seconds for a reply.
-        IQ answer = (IQ) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
-
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
+        connection.createPacketCollectorAndSend(iq).nextResultOrThrow();
     }
 
     private void changeAffiliationByAdmin(String jid, String affiliation, String reason)
@@ -1441,22 +1342,7 @@ public class MultiUserChat {
         item.setReason(reason);
         iq.addItem(item);
 
-        // Wait for a response packet back from the server.
-        PacketFilter responseFilter = new PacketIDFilter(iq.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the change request to the server.
-        connection.sendPacket(iq);
-        // Wait up to a certain number of seconds for a reply.
-        IQ answer = (IQ) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
-
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
+        connection.createPacketCollectorAndSend(iq).nextResultOrThrow();
     }
 
     private void changeAffiliationByAdmin(Collection<String> jids, String affiliation)
@@ -1471,22 +1357,7 @@ public class MultiUserChat {
             iq.addItem(item);
         }
 
-        // Wait for a response packet back from the server.
-        PacketFilter responseFilter = new PacketIDFilter(iq.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the change request to the server.
-        connection.sendPacket(iq);
-        // Wait up to a certain number of seconds for a reply.
-        IQ answer = (IQ) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
-
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
+        connection.createPacketCollectorAndSend(iq).nextResultOrThrow();
     }
 
     private void changeRole(String nickname, String role, String reason) throws XMPPException {
@@ -1499,22 +1370,7 @@ public class MultiUserChat {
         item.setReason(reason);
         iq.addItem(item);
 
-        // Wait for a response packet back from the server.
-        PacketFilter responseFilter = new PacketIDFilter(iq.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the change request to the server.
-        connection.sendPacket(iq);
-        // Wait up to a certain number of seconds for a reply.
-        IQ answer = (IQ) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
-
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
+        connection.createPacketCollectorAndSend(iq).nextResultOrThrow();
     }
 
     private void changeRole(Collection<String> nicknames, String role) throws XMPPException {
@@ -1528,22 +1384,7 @@ public class MultiUserChat {
             iq.addItem(item);
         }
 
-        // Wait for a response packet back from the server.
-        PacketFilter responseFilter = new PacketIDFilter(iq.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the change request to the server.
-        connection.sendPacket(iq);
-        // Wait up to a certain number of seconds for a reply.
-        IQ answer = (IQ) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
-
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
+        connection.createPacketCollectorAndSend(iq).nextResultOrThrow();
     }
 
     /**
@@ -1692,22 +1533,8 @@ public class MultiUserChat {
         MUCOwner.Item item = new MUCOwner.Item(affiliation);
         iq.addItem(item);
 
-        // Wait for a response packet back from the server.
-        PacketFilter responseFilter = new PacketIDFilter(iq.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the request to the server.
-        connection.sendPacket(iq);
-        // Wait up to a certain number of seconds for a reply.
-        MUCOwner answer = (MUCOwner) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
+        MUCOwner answer = connection.createPacketCollectorAndSend(iq).nextResultOrThrow();
 
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
         // Get the list of affiliates from the server's answer
         List<Affiliate> affiliates = new ArrayList<Affiliate>();
         for (Iterator it = answer.getItems(); it.hasNext();) {
@@ -1733,22 +1560,8 @@ public class MultiUserChat {
         MUCAdmin.Item item = new MUCAdmin.Item(affiliation, null);
         iq.addItem(item);
 
-        // Wait for a response packet back from the server.
-        PacketFilter responseFilter = new PacketIDFilter(iq.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the request to the server.
-        connection.sendPacket(iq);
-        // Wait up to a certain number of seconds for a reply.
-        MUCAdmin answer = (MUCAdmin) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
+        MUCAdmin answer = connection.createPacketCollectorAndSend(iq).nextResultOrThrow();
 
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
         // Get the list of affiliates from the server's answer
         List<Affiliate> affiliates = new ArrayList<Affiliate>();
         for (Iterator it = answer.getItems(); it.hasNext();) {
@@ -1795,22 +1608,8 @@ public class MultiUserChat {
         MUCAdmin.Item item = new MUCAdmin.Item(null, role);
         iq.addItem(item);
 
-        // Wait for a response packet back from the server.
-        PacketFilter responseFilter = new PacketIDFilter(iq.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        // Send the request to the server.
-        connection.sendPacket(iq);
-        // Wait up to a certain number of seconds for a reply.
-        MUCAdmin answer = (MUCAdmin) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        // Stop queuing results
-        response.cancel();
+        MUCAdmin answer = connection.createPacketCollectorAndSend(iq).nextResultOrThrow();
 
-        if (answer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (answer.getError() != null) {
-            throw new XMPPException(answer.getError());
-        }
         // Get the list of participants from the server's answer
         List<Occupant> participants = new ArrayList<Occupant>();
         for (Iterator it = answer.getItems(); it.hasNext();) {

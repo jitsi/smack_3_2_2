@@ -52,10 +52,7 @@
 
 package org.jivesoftware.smack;
 
-import org.jivesoftware.smack.filter.FromMatchesFilter;
-import org.jivesoftware.smack.filter.PacketIDFilter;
-import org.jivesoftware.smack.filter.PacketTypeFilter;
-import org.jivesoftware.smack.filter.PacketFilter;
+import org.jivesoftware.smack.filter.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.test.SmackTestCase;
 
@@ -118,7 +115,7 @@ public class PacketReaderTest extends SmackTestCase {
 
         // Send the IQ and wait for the answer
         PacketCollector collector = getConnection(0).createPacketCollector(
-                new PacketIDFilter(iqPacket.getPacketID()));
+                new IQReplyFilter(iqPacket, getConnection(0)));
         getConnection(0).sendPacket(iqPacket);
         IQ response = (IQ) collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
         if (response == null) {

@@ -25,17 +25,12 @@ import org.jivesoftware.smack.Connection;
 import org.jivesoftware.smack.PacketCollector;
 import org.jivesoftware.smack.SmackConfiguration;
 import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.filter.PacketIDFilter;
+import org.jivesoftware.smack.filter.IQReplyFilter;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.test.SmackTestCase;
 import org.jivesoftware.smackx.ServiceDiscoveryManager;
-import org.jivesoftware.smackx.bytestreams.socks5.Socks5BytestreamListener;
-import org.jivesoftware.smackx.bytestreams.socks5.Socks5BytestreamManager;
-import org.jivesoftware.smackx.bytestreams.socks5.Socks5BytestreamRequest;
-import org.jivesoftware.smackx.bytestreams.socks5.Socks5BytestreamSession;
 import org.jivesoftware.smackx.bytestreams.socks5.Socks5PacketUtils;
-import org.jivesoftware.smackx.bytestreams.socks5.Socks5Proxy;
 import org.jivesoftware.smackx.bytestreams.socks5.packet.Bytestream;
 
 /**
@@ -82,8 +77,9 @@ public class Socks5ByteStreamTest extends SmackTestCase {
                         initiatorConnection.getUser(), targetConnection.getUser(), "session_id");
         bytestreamInitiation.addStreamHost("proxy.localhost", "127.0.0.1", 7777);
 
-        PacketCollector collector = initiatorConnection.createPacketCollector(new PacketIDFilter(
-                        bytestreamInitiation.getPacketID()));
+        PacketCollector collector = initiatorConnection.createPacketCollector(
+                new IQReplyFilter(bytestreamInitiation, getConnection(0)));
+
         initiatorConnection.sendPacket(bytestreamInitiation);
         Packet result = collector.nextResult();
 

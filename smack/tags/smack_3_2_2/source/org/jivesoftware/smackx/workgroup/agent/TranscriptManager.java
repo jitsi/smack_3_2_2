@@ -21,11 +21,8 @@ package org.jivesoftware.smackx.workgroup.agent;
 
 import org.jivesoftware.smackx.workgroup.packet.Transcript;
 import org.jivesoftware.smackx.workgroup.packet.Transcripts;
-import org.jivesoftware.smack.PacketCollector;
-import org.jivesoftware.smack.SmackConfiguration;
 import org.jivesoftware.smack.Connection;
 import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.filter.PacketIDFilter;
 
 /**
  * A TranscriptManager helps to retrieve the full conversation transcript of a given session
@@ -52,21 +49,8 @@ public class TranscriptManager {
     public Transcript getTranscript(String workgroupJID, String sessionID) throws XMPPException {
         Transcript request = new Transcript(sessionID);
         request.setTo(workgroupJID);
-        PacketCollector collector = connection.createPacketCollector(new PacketIDFilter(request.getPacketID()));
-        // Send the request
-        connection.sendPacket(request);
 
-        Transcript response = (Transcript) collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
-
-        // Cancel the collector.
-        collector.cancel();
-        if (response == null) {
-            throw new XMPPException("No response from server on status set.");
-        }
-        if (response.getError() != null) {
-            throw new XMPPException(response.getError());
-        }
-        return response;
+        return connection.createPacketCollectorAndSend(request).nextResultOrThrow();
     }
 
     /**
@@ -81,20 +65,7 @@ public class TranscriptManager {
     public Transcripts getTranscripts(String workgroupJID, String userID) throws XMPPException {
         Transcripts request = new Transcripts(userID);
         request.setTo(workgroupJID);
-        PacketCollector collector = connection.createPacketCollector(new PacketIDFilter(request.getPacketID()));
-        // Send the request
-        connection.sendPacket(request);
 
-        Transcripts response = (Transcripts) collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
-
-        // Cancel the collector.
-        collector.cancel();
-        if (response == null) {
-            throw new XMPPException("No response from server on status set.");
-        }
-        if (response.getError() != null) {
-            throw new XMPPException(response.getError());
-        }
-        return response;
+        return connection.createPacketCollectorAndSend(request).nextResultOrThrow();
     }
 }

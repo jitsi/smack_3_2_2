@@ -36,7 +36,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.jivesoftware.smack.debugger.SmackDebugger;
+import org.jivesoftware.smack.filter.IQReplyFilter;
 import org.jivesoftware.smack.filter.PacketFilter;
+import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
 
@@ -562,6 +564,52 @@ public abstract class Connection {
         // Add the collector to the list of active collectors.
         collectors.add(collector);
         return collector;
+    }
+
+    /**
+     * Creates a new stanza(/packet) collector collecting packets that are replies to <code>packet</code>.
+     * Does also send <code>packet</code>. The stanza(/packet) filter for the collector is an
+     * {@link IQReplyFilter}, guaranteeing that stanza(/packet) id and JID in the 'from' address have
+     * expected values.
+     *
+     * @param packet the stanza(/packet) to filter responses from
+     * @return a new stanza(/packet) collector.
+     * @throws SmackException.NotConnectedException
+     * @throws InterruptedException
+     */
+    public PacketCollector createPacketCollectorAndSend(IQ packet)
+    {
+        PacketFilter packetFilter = new IQReplyFilter(packet, this);
+        // Create the packet collector before sending the packet
+        PacketCollector packetCollector = createPacketCollectorAndSend(packetFilter, packet);
+        return packetCollector;
+    }
+
+    /**
+     * Creates a new stanza(/packet) collector for this connection. A stanza(/packet) filter determines
+     * which packets will be accumulated by the collector. A PacketCollector is
+     * more suitable to use than a {@link PacketListener} when you need to wait for
+     * a specific result.
+     *
+     * @param packetFilter the stanza(/packet) filter to use.
+     * @param packet the packet to send right after the collector got created
+     * @return a new stanza(/packet) collector.
+     * @throws InterruptedException
+     * @throws SmackException.NotConnectedException
+     */
+    public PacketCollector createPacketCollectorAndSend(PacketFilter packetFilter, Packet packet)
+    {
+        // Create the packet collector before sending the packet
+        PacketCollector packetCollector = createPacketCollector(packetFilter);
+        try {
+            // Now we can send the packet as the collector has been created
+            sendPacket(packet);
+        }
+        catch (RuntimeException e) {
+            packetCollector.cancel();
+            throw e;
+        }
+        return packetCollector;
     }
 
     /**

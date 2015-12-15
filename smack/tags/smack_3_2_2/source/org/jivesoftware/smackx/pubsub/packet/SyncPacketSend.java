@@ -13,12 +13,10 @@
  */
 package org.jivesoftware.smackx.pubsub.packet;
 
-import org.jivesoftware.smack.PacketCollector;
 import org.jivesoftware.smack.SmackConfiguration;
 import org.jivesoftware.smack.Connection;
 import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.filter.PacketFilter;
-import org.jivesoftware.smack.filter.PacketIDFilter;
+import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
 
 /**
@@ -32,30 +30,13 @@ final public class SyncPacketSend
 	private SyncPacketSend()
 	{	}
 	
-	static public Packet getReply(Connection connection, Packet packet, long timeout)
+	static public Packet getReply(Connection connection, IQ packet, long timeout)
 		throws XMPPException
 	{
-        PacketFilter responseFilter = new PacketIDFilter(packet.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        
-        connection.sendPacket(packet);
-
-        // Wait up to a certain number of seconds for a reply.
-        Packet result = response.nextResult(timeout);
-
-        // Stop queuing results
-        response.cancel();
-
-        if (result == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (result.getError() != null) {
-            throw new XMPPException(result.getError());
-        }
-        return result;
+        return connection.createPacketCollectorAndSend(packet).nextResultOrThrow();
 	}
 
-	static public Packet getReply(Connection connection, Packet packet)
+	static public Packet getReply(Connection connection, IQ packet)
 		throws XMPPException
 	{
 		return getReply(connection, packet, SmackConfiguration.getPacketReplyTimeout());

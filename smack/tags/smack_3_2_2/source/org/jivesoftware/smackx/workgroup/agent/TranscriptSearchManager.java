@@ -20,11 +20,8 @@
 package org.jivesoftware.smackx.workgroup.agent;
 
 import org.jivesoftware.smackx.workgroup.packet.TranscriptSearch;
-import org.jivesoftware.smack.PacketCollector;
-import org.jivesoftware.smack.SmackConfiguration;
 import org.jivesoftware.smack.Connection;
 import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.filter.PacketIDFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smackx.Form;
 import org.jivesoftware.smackx.ReportedData;
@@ -57,21 +54,9 @@ public class TranscriptSearchManager {
         search.setType(IQ.Type.GET);
         search.setTo(serviceJID);
 
-        PacketCollector collector = connection.createPacketCollector(
-                new PacketIDFilter(search.getPacketID()));
-        connection.sendPacket(search);
+        TranscriptSearch response
+                = connection.createPacketCollectorAndSend(search).nextResultOrThrow();
 
-        TranscriptSearch response = (TranscriptSearch) collector.nextResult(
-                SmackConfiguration.getPacketReplyTimeout());
-
-        // Cancel the collector.
-        collector.cancel();
-        if (response == null) {
-            throw new XMPPException("No response from server on status set.");
-        }
-        if (response.getError() != null) {
-            throw new XMPPException(response.getError());
-        }
         return Form.getFormFrom(response);
     }
 
@@ -91,19 +76,9 @@ public class TranscriptSearchManager {
         search.setTo(serviceJID);
         search.addExtension(completedForm.getDataFormToSend());
 
-        PacketCollector collector = connection.createPacketCollector(new PacketIDFilter(search.getPacketID()));
-        connection.sendPacket(search);
+        TranscriptSearch response
+                = connection.createPacketCollectorAndSend(search).nextResultOrThrow();
 
-        TranscriptSearch response = (TranscriptSearch) collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
-
-        // Cancel the collector.
-        collector.cancel();
-        if (response == null) {
-            throw new XMPPException("No response from server on status set.");
-        }
-        if (response.getError() != null) {
-            throw new XMPPException(response.getError());
-        }
         return ReportedData.getReportedDataFrom(response);
     }
 }

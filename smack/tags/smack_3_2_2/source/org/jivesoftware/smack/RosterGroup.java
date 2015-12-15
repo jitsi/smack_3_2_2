@@ -20,7 +20,6 @@
 
 package org.jivesoftware.smack;
 
-import org.jivesoftware.smack.filter.PacketIDFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.RosterPacket;
 import org.jivesoftware.smack.util.StringUtils;
@@ -174,21 +173,11 @@ public class RosterGroup {
                 item.addGroupName(getName());
                 packet.addRosterItem(item);
                 // Wait up to a certain number of seconds for a reply from the server.
-                collector = connection
-                        .createPacketCollector(new PacketIDFilter(packet.getPacketID()));
-                connection.sendPacket(packet);
+                collector = connection.createPacketCollectorAndSend(packet);
             }
         }
         if (collector != null) {
-            IQ response = (IQ) collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
-            collector.cancel();
-            if (response == null) {
-                throw new XMPPException("No response from the server.");
-            }
-            // If the server replied with an error, throw an exception.
-            else if (response.getType() == IQ.Type.ERROR) {
-                throw new XMPPException(response.getError());
-            }
+            collector.nextResultOrThrow();
         }
     }
 
@@ -216,21 +205,11 @@ public class RosterGroup {
                 item.removeGroupName(this.getName());
                 packet.addRosterItem(item);
                 // Wait up to a certain number of seconds for a reply from the server.
-                collector = connection
-                        .createPacketCollector(new PacketIDFilter(packet.getPacketID()));
-                connection.sendPacket(packet);
+                collector = connection.createPacketCollectorAndSend(packet);
             }
         }
         if (collector != null) {
-            IQ response = (IQ) collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
-            collector.cancel();
-            if (response == null) {
-                throw new XMPPException("No response from the server.");
-            }
-            // If the server replied with an error, throw an exception.
-            else if (response.getType() == IQ.Type.ERROR) {
-                throw new XMPPException(response.getError());
-            }
+            collector.nextResultOrThrow();
         }
     }
 

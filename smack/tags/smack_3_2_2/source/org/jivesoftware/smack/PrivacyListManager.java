@@ -179,27 +179,8 @@ public class PrivacyListManager {
 		requestPrivacy.setFrom(this.getUser());
 		
 		// Filter packets looking for an answer from the server.
-		PacketFilter responseFilter = new PacketIDFilter(requestPrivacy.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        
-        // Send create & join packet.
-        connection.sendPacket(requestPrivacy);
-        
-        // Wait up to a certain number of seconds for a reply.
-        Privacy privacyAnswer =
-            (Privacy) response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        
-        // Stop queuing results
-        response.cancel();
-
-        // Interprete the result and answer the privacy only if it is valid
-        if (privacyAnswer == null) {
-            throw new XMPPException("No response from server.");
-        }
-        else if (privacyAnswer.getError() != null) {
-            throw new XMPPException(privacyAnswer.getError());
-        }
-        return privacyAnswer;
+        return (Privacy) connection
+                .createPacketCollectorAndSend(requestPrivacy).nextResultOrThrow();
 	}
 	
 	/**
@@ -218,25 +199,7 @@ public class PrivacyListManager {
 		requestPrivacy.setFrom(this.getUser());
 		
 		// Filter packets looking for an answer from the server.
-		PacketFilter responseFilter = new PacketIDFilter(requestPrivacy.getPacketID());
-        PacketCollector response = connection.createPacketCollector(responseFilter);
-        
-        // Send create & join packet.
-        connection.sendPacket(requestPrivacy);
-        
-        // Wait up to a certain number of seconds for a reply.
-        Packet privacyAnswer = response.nextResult(SmackConfiguration.getPacketReplyTimeout());
-        
-        // Stop queuing results
-        response.cancel();
-
-        // Interprete the result and answer the privacy only if it is valid
-        if (privacyAnswer == null) {
-            throw new XMPPException("No response from server.");
-        } else if (privacyAnswer.getError() != null) {
-            throw new XMPPException(privacyAnswer.getError());
-        }
-        return privacyAnswer;
+        return connection.createPacketCollectorAndSend(requestPrivacy).nextResultOrThrow();
 	}
 
 	/**

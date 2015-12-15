@@ -20,14 +20,9 @@
 
 package org.jivesoftware.smackx.packet;
 
-import org.jivesoftware.smack.PacketCollector;
-import org.jivesoftware.smack.SmackConfiguration;
 import org.jivesoftware.smack.Connection;
 import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.filter.PacketIDFilter;
 import org.jivesoftware.smack.packet.IQ;
-import org.jivesoftware.smack.packet.Packet;
-import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.util.StringUtils;
 
 import java.io.BufferedInputStream;
@@ -505,19 +500,7 @@ public class VCard extends IQ {
 
         setType(IQ.Type.SET);
         setFrom(connection.getUser());
-        PacketCollector collector = connection.createPacketCollector(new PacketIDFilter(getPacketID()));
-        connection.sendPacket(this);
-
-        Packet response = collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
-
-        // Cancel the collector.
-        collector.cancel();
-        if (response == null) {
-            throw new XMPPException("No response from server on status set.");
-        }
-        if (response.getError() != null) {
-            throw new XMPPException(response.getError());
-        }
+        connection.createPacketCollectorAndSend(this).nextResultOrThrow();
     }
 
     /**
@@ -543,28 +526,14 @@ public class VCard extends IQ {
 
     private void doLoad(Connection connection, String user) throws XMPPException {
         setType(Type.GET);
-        PacketCollector collector = connection.createPacketCollector(
-                new PacketIDFilter(getPacketID()));
-        connection.sendPacket(this);
 
-        VCard result = null;
         try {
-            result = (VCard) collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
-
-            if (result == null) {
-                String errorMessage = "Timeout getting VCard information";
-                throw new XMPPException(errorMessage, new XMPPError(
-                        XMPPError.Condition.request_timeout, errorMessage));
-            }
-            if (result.getError() != null) {
-                throw new XMPPException(result.getError());
-            }
+            VCard result = connection.createPacketCollectorAndSend(this).nextResultOrThrow();
+            copyFieldsFrom(result);
         }
         catch (ClassCastException e) {
-            System.out.println("No VCard for " + user);
+            LOGGER.log(Level.WARNING, "No VCard for " + user);
         }
-
-        copyFieldsFrom(result);
     }
 
     public String getChildElementXML() {

@@ -23,7 +23,6 @@ package org.jivesoftware.smackx;
 import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.filter.AndFilter;
 import org.jivesoftware.smack.filter.IQTypeFilter;
-import org.jivesoftware.smack.filter.PacketIDFilter;
 import org.jivesoftware.smack.filter.PacketTypeFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
@@ -151,22 +150,7 @@ public class LastActivityManager {
         LastActivity activity = new LastActivity();
         activity.setTo(jid);
 
-        PacketCollector collector =
-                con.createPacketCollector(new PacketIDFilter(activity.getPacketID()));
-        con.sendPacket(activity);
-
-        LastActivity response =
-                (LastActivity) collector.nextResult(SmackConfiguration.getPacketReplyTimeout());
-
-        // Cancel the collector.
-        collector.cancel();
-        if (response == null) {
-            throw new XMPPException("No response from server on status set.");
-        }
-        if (response.getError() != null) {
-            throw new XMPPException(response.getError());
-        }
-        return response;
+        return con.createPacketCollectorAndSend(activity).nextResultOrThrow();
 	}
 
 }
