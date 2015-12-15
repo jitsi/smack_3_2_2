@@ -58,6 +58,8 @@ public final class SmackConfiguration {
     private static int localSocks5ProxyPort = 7777;
     private static int packetCollectorSize = 5000;
 
+    private static boolean javaObjectEnabled = false;
+
     private SmackConfiguration() {
     }
 
@@ -205,7 +207,7 @@ public final class SmackConfiguration {
      * Sets the default max size of a packet collector before it will delete 
      * the older packets.
      * 
-     * @param The number of packets to queue before deleting older packets.
+     * @param collectorSize The number of packets to queue before deleting older packets.
      */
     public static void setPacketCollectorSize(int collectorSize) {
     	packetCollectorSize = collectorSize;
@@ -344,5 +346,24 @@ public final class SmackConfiguration {
             }
         }
         return loaders.toArray(new ClassLoader[loaders.size()]);
+    }
+
+    /**
+     * Enables deserialization of Java objects embedded in the 'properties' stanza(/packet) extension. Since
+     * this is a security sensitive feature, it is disabled per default in Smack. Only enable it if
+     * you are sure that you understand the potential security implications it can cause.
+     * <p>
+     * See also:
+     * <ul>
+     * <li> <a href="http://stackoverflow.com/questions/19054460/">"What is the security impact of deserializing untrusted data in Java?" on Stackoverflow<a>
+     * <ul>
+     * @param enabled true to enable Java object deserialization
+     */
+    public static void setJavaObjectEnabled(boolean enabled) {
+        SmackConfiguration.javaObjectEnabled = enabled;
+    }
+
+    public static boolean isJavaObjectEnabled() {
+        return javaObjectEnabled;
     }
 }

@@ -21,6 +21,7 @@
 package org.jivesoftware.smack.util;
 
 import org.jivesoftware.smack.Connection;
+import org.jivesoftware.smack.SmackConfiguration;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.provider.IQProvider;
 import org.jivesoftware.smack.provider.PacketExtensionProvider;
@@ -616,13 +617,15 @@ public class PacketParserUtils {
                                 value = valueText;
                             }
                             else if ("java-object".equals(type)) {
-                                try {
-                                    byte [] bytes = StringUtils.decodeBase64(valueText);
-                                    ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bytes));
-                                    value = in.readObject();
-                                }
-                                catch (Exception e) {
-                                    LOGGER.log(Level.SEVERE, "", e);
+                                if (SmackConfiguration.isJavaObjectEnabled()) {
+                                    try {
+                                        byte[] bytes = StringUtils.decodeBase64(valueText);
+                                        ObjectInputStream in = new ObjectInputStream(
+                                                new ByteArrayInputStream(bytes));
+                                        value = in.readObject();
+                                    } catch (Exception e) {
+                                        LOGGER.log(Level.SEVERE, "", e);
+                                    }
                                 }
                             }
                             if (name != null && value != null) {
@@ -879,7 +882,8 @@ public class PacketParserUtils {
         if (type.getName().equals("double")) {
             return Double.valueOf(value);
         }
-        if (type.getName().equals("java.lang.Class")) {
+        if (type.getName().equals("java.lang.Class")
+                && SmackConfiguration.isJavaObjectEnabled()) {
             return Class.forName(value);
         }
         return null;
