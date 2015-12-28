@@ -31,6 +31,7 @@
         <configuration>
           <includes>
             <include>org/jivesoftware/smack/**/*.java</include>
+            <include>org/jivesoftware/smackx/**/*.java</include>
           </includes>
         </configuration>
       </plugin>
