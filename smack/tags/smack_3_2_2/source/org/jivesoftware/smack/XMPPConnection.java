@@ -20,12 +20,11 @@
 
 package org.jivesoftware.smack;
 
-import org.jivesoftware.smack.filter.PacketFilter;
-import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError;
-import org.jivesoftware.smack.util.StringUtils;
+import org.jivesoftware.smack.util.PacketParserUtils;
 import org.jivesoftware.smack.util.TLSUtils;
+import org.xmlpull.v1.XmlPullParser;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -52,35 +51,18 @@ import java.util.logging.Logger;
  * 
  * @see Connection
  * @author Matt Tucker
+ * @author Pawel Domas
  */
-public class XMPPConnection extends Connection {
+public class XMPPConnection extends AbstractConnection {
 
     private static final Logger LOGGER = Logger.getLogger(XMPPConnection.class.getName());
 
     /**
      * The socket which is used for this connection.
      */
-    Socket socket;
+    private Socket socket;
 
-    String connectionID = null;
-    private String user = null;
-    private boolean connected = false;
-    /**
-     * Flag that indicates if the user is currently authenticated with the server.
-     */
-    private boolean authenticated = false;
-    /**
-     * Flag that indicates if the user was authenticated with the server when the connection
-     * to the server was closed (abruptly or not).
-     */
-    private boolean wasAuthenticated = false;
-    private boolean anonymous = false;
     private boolean usingTLS = false;
-
-    PacketWriter packetWriter;
-    PacketReader packetReader;
-
-    Roster roster = null;
 
     /**
      * Collection of available stream compression methods offered by the server.
@@ -175,200 +157,8 @@ public class XMPPConnection extends Connection {
         config.setCallbackHandler(callbackHandler);
     }
 
-    public String getConnectionID() {
-        if (!isConnected()) {
-            return null;
-        }
-        return connectionID;
-    }
-
-    public String getUser() {
-        if (!isAuthenticated()) {
-            return null;
-        }
-        return user;
-    }
-
-    @Override
-    public synchronized void login(String username, String password, String resource) throws XMPPException {
-        if (!isConnected()) {
-            throw new IllegalStateException("Not connected to server.");
-        }
-        if (authenticated) {
-            throw new IllegalStateException("Already logged in to server.");
-        }
-        // Do partial version of nameprep on the username.
-        username = username.toLowerCase().trim();
-
-        String response;
-        if (config.isSASLAuthenticationEnabled() &&
-                saslAuthentication.hasNonAnonymousAuthentication()) {
-            // Authenticate using SASL
-            if (password != null) {
-                response = saslAuthentication.authenticate(username, password, resource);
-            }
-            else {
-                response = saslAuthentication
-                        .authenticate(username, resource, config.getCallbackHandler());
-            }
-        }
-        else {
-            // Authenticate using Non-SASL
-            response = new NonSASLAuthentication(this).authenticate(username, password, resource);
-        }
-
-        // Set the user.
-        if (response != null) {
-            this.user = response;
-            // Update the serviceName with the one returned by the server
-            config.setServiceName(StringUtils.parseServer(response));
-        }
-        else {
-            this.user = username + "@" + getServiceName();
-            if (resource != null) {
-                this.user += "/" + resource;
-            }
-        }
-
-        // If compression is enabled then request the server to use stream compression
-        if (config.isCompressionEnabled()) {
-            useCompression();
-        }
-
-        // Indicate that we're now authenticated.
-        authenticated = true;
-        anonymous = false;
-
-        // Create the roster if it is not a reconnection or roster already created by getRoster()
-        if (this.roster == null) {
-            this.roster = new Roster(this);
-        }
-        if (config.isRosterLoadedAtLogin()) {
-            this.roster.reload();
-        }
-
-        // Set presence to online.
-        if (config.isSendPresence()) {
-            packetWriter.sendPacket(new Presence(Presence.Type.available));
-        }
-
-        // Stores the authentication for future reconnection
-        config.setLoginInfo(username, password, resource);
-
-        // If debugging is enabled, change the the debug window title to include the
-        // name we are now logged-in as.
-        // If DEBUG_ENABLED was set to true AFTER the connection was created the debugger
-        // will be null
-        if (config.isDebuggerEnabled() && debugger != null) {
-            debugger.userHasLogged(user);
-        }
-    }
-
-    @Override
-    public synchronized void loginAnonymously() throws XMPPException {
-        if (!isConnected()) {
-            throw new IllegalStateException("Not connected to server.");
-        }
-        if (authenticated) {
-            throw new IllegalStateException("Already logged in to server.");
-        }
-
-        String response;
-        if (config.isSASLAuthenticationEnabled() &&
-                saslAuthentication.hasAnonymousAuthentication()) {
-            response = saslAuthentication.authenticateAnonymously();
-        }
-        else {
-            // Authenticate using Non-SASL
-            response = new NonSASLAuthentication(this).authenticateAnonymously();
-        }
-
-        // Set the user value.
-        this.user = response;
-        // Update the serviceName with the one returned by the server
-        config.setServiceName(StringUtils.parseServer(response));
-
-        // If compression is enabled then request the server to use stream compression
-        if (config.isCompressionEnabled()) {
-            useCompression();
-        }
-
-        // Set presence to online.
-        packetWriter.sendPacket(new Presence(Presence.Type.available));
-
-        // Indicate that we're now authenticated.
-        authenticated = true;
-        anonymous = true;
-
-        // If debugging is enabled, change the the debug window title to include the
-        // name we are now logged-in as.
-        // If DEBUG_ENABLED was set to true AFTER the connection was created the debugger
-        // will be null
-        if (config.isDebuggerEnabled() && debugger != null) {
-            debugger.userHasLogged(user);
-        }
-    }
-
-    public Roster getRoster() {
-        // synchronize against login()
-        synchronized(this) {
-            // if connection is authenticated the roster is already set by login() 
-            // or a previous call to getRoster()
-            if (!isAuthenticated() || isAnonymous()) {
-                if (roster == null) {
-                    roster = new Roster(this);
-                }
-                return roster;
-            }
-        }
-
-        if (!config.isRosterLoadedAtLogin()) {
-            roster.reload();
-        }
-        // If this is the first time the user has asked for the roster after calling
-        // login, we want to wait for the server to send back the user's roster. This
-        // behavior shields API users from having to worry about the fact that roster
-        // operations are asynchronous, although they'll still have to listen for
-        // changes to the roster. Note: because of this waiting logic, internal
-        // Smack code should be wary about calling the getRoster method, and may need to
-        // access the roster object directly.
-        if (!roster.rosterInitialized) {
-            try {
-                synchronized (roster) {
-                    long waitTime = SmackConfiguration.getPacketReplyTimeout();
-                    long start = System.currentTimeMillis();
-                    while (!roster.rosterInitialized) {
-                        if (waitTime <= 0) {
-                            break;
-                        }
-                        roster.wait(waitTime);
-                        long now = System.currentTimeMillis();
-                        waitTime -= now - start;
-                        start = now;
-                    }
-                }
-            }
-            catch (InterruptedException ie) {
-                // Ignore.
-            }
-        }
-        return roster;
-    }
-
-    public boolean isConnected() {
-        return connected;
-    }
-
     public boolean isSecureConnection() {
         return isUsingTLS();
-    }
-
-    public boolean isAuthenticated() {
-        return authenticated;
-    }
-
-    public boolean isAnonymous() {
-        return anonymous;
     }
 
     /**
@@ -380,133 +170,21 @@ public class XMPPConnection extends Connection {
      *
      * @param unavailablePresence the presence packet to send during shutdown.
      */
-    protected void shutdown(Presence unavailablePresence) {
-        // Set presence to offline.
-        packetWriter.sendPacket(unavailablePresence);
+    public void shutdown(Presence unavailablePresence) {
 
-        this.setWasAuthenticated(authenticated);
-        authenticated = false;
-        connected = false;
+        super.shutdown(unavailablePresence);
 
-        packetReader.shutdown();
-        packetWriter.shutdown();
-        // Wait 150 ms for processes to clean-up, then shutdown.
         try {
-            Thread.sleep(150);
+            if (socket != null) {
+                socket.close();
+            }
         }
         catch (Exception e) {
             // Ignore.
         }
-
-        // Close down the readers and writers.
-        if (reader != null) {
-            try {
-                reader.close();
-            }
-            catch (Throwable ignore) { /* ignore */ }
-            reader = null;
-        }
-        if (writer != null) {
-            try {
-                writer.close();
-            }
-            catch (Throwable ignore) { /* ignore */ }
-            writer = null;
-        }
-
-        try {
-            socket.close();
-        }
-        catch (Exception e) {
-            // Ignore.
-        }
-
-        saslAuthentication.init();
     }
 
-    public synchronized void disconnect(Presence unavailablePresence) {
-        // If not connected, ignore this request.
-        if (packetReader == null || packetWriter == null) {
-            return;
-        }
-
-        shutdown(unavailablePresence);
-
-        if (roster != null) {
-            roster.cleanup();
-            roster = null;
-        }
-
-        wasAuthenticated = false;
-
-        packetWriter.cleanup();
-        packetWriter = null;
-        packetReader.cleanup();
-        packetReader = null;
-    }
-
-    public void sendPacket(Packet packet) {
-        if (!isConnected()) {
-            throw new IllegalStateException("Not connected to server.");
-        }
-        if (packet == null) {
-            throw new NullPointerException("Packet is null.");
-        }
-        packetWriter.sendPacket(packet);
-    }
-
-    /**
-     * Registers a packet interceptor with this connection. The interceptor will be
-     * invoked every time a packet is about to be sent by this connection. Interceptors
-     * may modify the packet to be sent. A packet filter determines which packets
-     * will be delivered to the interceptor.
-     *
-     * @param packetInterceptor the packet interceptor to notify of packets about to be sent.
-     * @param packetFilter      the packet filter to use.
-     * @deprecated replaced by {@link Connection#addPacketInterceptor(PacketInterceptor, PacketFilter)}.
-     */
-    public void addPacketWriterInterceptor(PacketInterceptor packetInterceptor,
-            PacketFilter packetFilter) {
-        addPacketInterceptor(packetInterceptor, packetFilter);
-    }
-
-    /**
-     * Removes a packet interceptor.
-     *
-     * @param packetInterceptor the packet interceptor to remove.
-     * @deprecated replaced by {@link Connection#removePacketInterceptor(PacketInterceptor)}.
-     */
-    public void removePacketWriterInterceptor(PacketInterceptor packetInterceptor) {
-        removePacketInterceptor(packetInterceptor);
-    }
-
-    /**
-     * Registers a packet listener with this connection. The listener will be
-     * notified of every packet that this connection sends. A packet filter determines
-     * which packets will be delivered to the listener. Note that the thread
-     * that writes packets will be used to invoke the listeners. Therefore, each
-     * packet listener should complete all operations quickly or use a different
-     * thread for processing.
-     *
-     * @param packetListener the packet listener to notify of sent packets.
-     * @param packetFilter   the packet filter to use.
-     * @deprecated replaced by {@link #addPacketSendingListener(PacketListener, PacketFilter)}.
-     */
-    public void addPacketWriterListener(PacketListener packetListener, PacketFilter packetFilter) {
-        addPacketSendingListener(packetListener, packetFilter);
-    }
-
-    /**
-     * Removes a packet listener for sending packets from this connection.
-     *
-     * @param packetListener the packet listener to remove.
-     * @deprecated replaced by {@link #removePacketSendingListener(PacketListener)}.
-     */
-    public void removePacketWriterListener(PacketListener packetListener) {
-        removePacketSendingListener(packetListener);
-    }
-
-    private void connectUsingConfiguration(ConnectionConfiguration config) throws XMPPException {
+    protected void connectUsingConfiguration(ConnectionConfiguration config) throws XMPPException {
         String host = config.getHost();
         int port = config.getPort();
         try {
@@ -529,7 +207,27 @@ public class XMPPConnection extends Connection {
             throw new XMPPException(errorMessage, new XMPPError(
                     XMPPError.Condition.remote_server_error, errorMessage), ioe);
         }
-        initConnection();
+    }
+
+    @Override
+    protected void initConnectionFailed(XMPPException ex) {
+        if (socket != null) {
+            try {
+                socket.close();
+            }
+            catch (Exception e) { /* ignore */ }
+            socket = null;
+        }
+    }
+
+    @Override
+    protected void onSuccessReceived() throws IOException {
+        // We now need to bind a resource for the connection
+        // Open a new stream and wait for the response
+        packetWriter.openStream();
+        // Reset the state of the parser since a new stream element is going
+        // to be sent by the server
+        packetReader.resetParser();
     }
 
     /**
@@ -538,106 +236,32 @@ public class XMPPConnection extends Connection {
      *
      * @throws XMPPException if establishing a connection to the server fails.
      */
-    private void initConnection() throws XMPPException {
+    protected void initConnection() throws XMPPException {
         boolean isFirstInitialization = packetReader == null || packetWriter == null;
         if (!isFirstInitialization) {
             usingCompression = false;
         }
 
-        // Set the reader and writer instance variables
-        initReaderAndWriter();
-
-        try {
-            if (isFirstInitialization) {
-                packetWriter = new PacketWriter(this);
-                packetReader = new PacketReader(this);
-
-                // If debugging is enabled, we should start the thread that will listen for
-                // all packets and then log them.
-                if (config.isDebuggerEnabled()) {
-                    addPacketListener(debugger.getReaderListener(), null);
-                    if (debugger.getWriterListener() != null) {
-                        addPacketSendingListener(debugger.getWriterListener(), null);
-                    }
-                }
-            }
-            else {
-                packetWriter.init();
-                packetReader.init();
-            }
-
-            // Start the packet writer. This will open a XMPP stream to the server
-            packetWriter.startup();
-            // Start the packet reader. The startup() method will block until we
-            // get an opening stream packet back from server.
-            packetReader.startup();
-
-            // Make note of the fact that we're now connected.
-            connected = true;
-
-            // Start keep alive process (after TLS was negotiated - if available)
-            packetWriter.startKeepAliveProcess();
-
-
-            if (isFirstInitialization) {
-                // Notify listeners that a new connection has been established
-                for (ConnectionCreationListener listener : getConnectionCreationListeners()) {
-                    listener.connectionCreated(this);
-                }
-            }
-            else if (!wasAuthenticated) {
-                packetReader.notifyReconnection();
-            }
-
-        }
-        catch (XMPPException ex) {
-            // An exception occurred in setting up the connection. Make sure we shut down the
-            // readers and writers and close the socket.
-
-            if (packetWriter != null) {
-                try {
-                    packetWriter.shutdown();
-                }
-                catch (Throwable ignore) { /* ignore */ }
-                packetWriter = null;
-            }
-            if (packetReader != null) {
-                try {
-                    packetReader.shutdown();
-                }
-                catch (Throwable ignore) { /* ignore */ }
-                packetReader = null;
-            }
-            if (reader != null) {
-                try {
-                    reader.close();
-                }
-                catch (Throwable ignore) { /* ignore */ }
-                reader = null;
-            }
-            if (writer != null) {
-                try {
-                    writer.close();
-                }
-                catch (Throwable ignore) {  /* ignore */}
-                writer = null;
-            }
-            if (socket != null) {
-                try {
-                    socket.close();
-                }
-                catch (Exception e) { /* ignore */ }
-                socket = null;
-            }
-            this.setWasAuthenticated(authenticated);
-            authenticated = false;
-            connected = false;
-
-            throw ex;        // Everything stoppped. Now throw the exception.
-        }
+        super.initConnection();
     }
 
-    private void initReaderAndWriter() throws XMPPException {
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected PacketWriter createPacketWriter() {
+        return new TCPXmppPacketWriter();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    protected PacketReader createPacketReader() {
+        return new TCPXmppPacketReader();
+    }
+
+    protected void initReaderAndWriter() throws XMPPException {
         try {
             if (!usingCompression) {
                 reader =
@@ -680,8 +304,7 @@ public class XMPPConnection extends Connection {
                     ioe);
         }
 
-        // If debugging is enabled, we open a window and write out all network traffic.
-        initDebugger();
+        super.initReaderAndWriter();
     }
 
     /***********************************************
@@ -704,7 +327,7 @@ public class XMPPConnection extends Connection {
      *
      * @param required true when the server indicates that TLS is required.
      */
-    void startTLSReceived(boolean required) {
+    private void startTLSReceived(boolean required) {
         if (required && config.getSecurityMode() ==
                 ConnectionConfiguration.SecurityMode.disabled) {
             packetReader.notifyConnectionError(new IllegalStateException(
@@ -732,7 +355,7 @@ public class XMPPConnection extends Connection {
      *
      * @throws Exception if an exception occurs.
      */
-    void proceedTLSReceived() throws Exception {
+    private void proceedTLSReceived() throws Exception {
         KeyStore ks = null;
         KeyManager[] kms = null;
         PasswordCallback pcb = null;
@@ -831,6 +454,9 @@ public class XMPPConnection extends Connection {
         // Set that TLS was successful
         usingTLS = true;
 
+        // Reset the state of the parser since a new stream element is going
+        // to be sent by the server
+        packetReader.resetParser();
         // Set the new  writer to use
         packetWriter.setWriter(writer);
         // Send a new opening stream to the server
@@ -842,7 +468,7 @@ public class XMPPConnection extends Connection {
      *
      * @param methods compression methods offered by the server.
      */
-    void setAvailableCompressionMethods(Collection<String> methods) {
+    private void setAvailableCompressionMethods(Collection<String> methods) {
         compressionMethods = methods;
     }
 
@@ -874,10 +500,10 @@ public class XMPPConnection extends Connection {
      *
      * @return true if stream compression negotiation was successful.
      */
-    private boolean useCompression() {
+    protected boolean useCompression() {
         // If stream compression was offered by the server and we want to use
         // compression then send compression request to the server
-        if (authenticated) {
+        if (isAuthenticated()) {
             throw new IllegalStateException("Compression should be negotiated before authentication.");
         }
         try {
@@ -923,7 +549,7 @@ public class XMPPConnection extends Connection {
      *
      * @throws Exception if there is an exception starting stream compression.
      */
-    void startStreamCompression() throws Exception {
+    private void startStreamCompression() throws Exception {
         // Secure the plain connection
         usingCompression = true;
         // Initialize the reader and writer with the new secured version
@@ -943,58 +569,9 @@ public class XMPPConnection extends Connection {
      * Notifies the XMPP connection that stream compression was denied so that
      * the connection process can proceed.
      */
-    void streamCompressionDenied() {
+    private void streamCompressionDenied() {
         synchronized (this) {
             this.notify();
-        }
-    }
-
-    /**
-     * Establishes a connection to the XMPP server and performs an automatic login
-     * only if the previous connection state was logged (authenticated). It basically
-     * creates and maintains a socket connection to the server.<p>
-     * <p/>
-     * Listeners will be preserved from a previous connection if the reconnection
-     * occurs after an abrupt termination.
-     *
-     * @throws XMPPException if an error occurs while trying to establish the connection.
-     *      Two possible errors can occur which will be wrapped by an XMPPException --
-     *      UnknownHostException (XMPP error code 504), and IOException (XMPP error code
-     *      502). The error codes and wrapped exceptions can be used to present more
-     *      appropiate error messages to end-users.
-     */
-    public void connect() throws XMPPException {
-        // Stablishes the connection, readers and writers
-        connectUsingConfiguration(config);
-        // Automatically makes the login if the user was previouslly connected successfully
-        // to the server and the connection was terminated abruptly
-        if (connected && wasAuthenticated) {
-            // Make the login
-            try {
-                if (isAnonymous()) {
-                    // Make the anonymous login
-                    loginAnonymously();
-                }
-                else {
-                    login(config.getUsername(), config.getPassword(),
-                            config.getResource());
-                }
-                packetReader.notifyReconnection();
-            }
-            catch (XMPPException e) {
-                LOGGER.log(Level.SEVERE, "Error login", e);
-            }
-        }
-    }
-
-    /**
-     * Sets whether the connection has already logged in the server.
-     *
-     * @param wasAuthenticated true if the connection has already been authenticated.
-     */
-    private void setWasAuthenticated(boolean wasAuthenticated) {
-        if (!this.wasAuthenticated) {
-            this.wasAuthenticated = wasAuthenticated;
         }
     }
 
@@ -1002,8 +579,202 @@ public class XMPPConnection extends Connection {
      * The currently used socket.
      * @return the currently used socket.
      */
+    @Override
     public Socket getSocket()
     {
         return socket;
+    }
+
+    class TCPXmppPacketWriter extends PacketWriter {
+
+        /**
+         * Creates a new packet writer.
+         */
+        TCPXmppPacketWriter() {
+            super(XMPPConnection.this, true);
+        }
+
+        /**
+         * Sends to the server a new stream element. This operation may be requested several times
+         * so we need to encapsulate the logic in one place. This message will be sent while doing
+         * TLS, SASL and resource binding.
+         *
+         * @throws IOException If an error occurs while sending the stanza to the server.
+         */
+        @Override
+        protected void openStream() throws IOException {
+            StringBuilder stream = new StringBuilder();
+            stream.append("<stream:stream");
+            stream.append(" to=\"").append(getServiceName()).append("\"");
+            stream.append(" xmlns=\"jabber:client\"");
+            stream.append(" xmlns:stream=\"http://etherx.jabber.org/streams\"");
+            stream.append(" version=\"1.0\">");
+            writer.write(stream.toString());
+            writer.flush();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected void closeStream() throws IOException {
+            writer.write("</stream:stream>");
+            writer.flush();
+        }
+    }
+
+    private class TCPXmppPacketReader extends PacketReader {
+
+        private boolean startTLSReceived;
+
+        private boolean startTLSRequired;
+
+        private TCPXmppPacketReader() {
+            super(XMPPConnection.this, "stream");
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected void init() {
+            super.init();
+
+            startTLSReceived = false;
+            startTLSRequired = false;
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected void doParsePackets(XmlPullParser parser) throws Exception {
+            int eventType = parser.getEventType();
+            boolean consumed = false;
+
+            if (eventType == XmlPullParser.START_TAG) {
+                // We found an opening stream. Record information about it, then notify
+                // the connectionID lock so that the packet reader startup can finish.
+                if (parser.getName().equals("stream")) {
+                    // Ensure the correct jabber:client namespace is being used.
+                    if ("jabber:client".equals(parser.getNamespace(null))) {
+                        // Get the connection id.
+                        for (int i=0; i<parser.getAttributeCount(); i++) {
+                            if (parser.getAttributeName(i).equals("id")) {
+                                String connectionID = parser.getAttributeValue(i);
+                                String version = parser.getAttributeValue("", "version");
+                                // Save the connectionID
+                                XMPPConnection.this.connectionID = connectionID;
+                                if (!"1.0".equals(version)) {
+                                    // Notify that a stream has been opened if the
+                                    // server is not XMPP 1.0 compliant otherwise make the
+                                    // notification after TLS has been negotiated or if TLS
+                                    // is not supported
+                                    connected = true;
+                                    releaseConnectionIDLock();
+                                }
+                            }
+                            else if (parser.getAttributeName(i).equals("from")) {
+                                // Use the server name that the server says that it is.
+                                config.setServiceName(parser.getAttributeValue(i));
+                            }
+                        }
+                    }
+                }
+                else if (parser.getName().equals("failure")) {
+                    String namespace = parser.getNamespace(null);
+                    if ("urn:ietf:params:xml:ns:xmpp-tls".equals(namespace)) {
+                        // TLS negotiation has failed. The server will close the connection
+                        throw new Exception("TLS negotiation has failed");
+                    }
+                    else if ("http://jabber.org/protocol/compress".equals(namespace)) {
+                        // Stream compression has been denied. This is a recoverable
+                        // situation. It is still possible to authenticate and
+                        // use the connection but using an uncompressed connection
+                        streamCompressionDenied();
+                        // We do not want to trigger generic "failure" handler
+                        // in super for this case.
+                        consumed = true;
+                    }
+                }
+                else if (parser.getName().equals("proceed")) {
+                    // Secure the connection by negotiating TLS
+                    proceedTLSReceived();
+                }
+                else if (parser.getName().equals("compressed")) {
+                    // Server confirmed that it's possible to use stream compression. Start
+                    // stream compression
+                    startStreamCompression();
+                    // Reset the state of the parser since a new stream element is going
+                    // to be sent by the server
+                    packetReader.resetParser();
+                }
+            }
+
+            if (!consumed) {
+                super.doParsePackets(parser);
+            }
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected void doParseFeatures(XmlPullParser parser) throws Exception {
+
+            super.doParseFeatures(parser);
+
+            boolean lastLoop = false;
+            int eventType = parser.getEventType();
+            String name = parser.getName();
+
+            if (eventType == XmlPullParser.START_TAG) {
+                if ("starttls".equals(name)) {
+                    startTLSReceived = true;
+                }
+                else if (parser.getName().equals("compression")) {
+                    // The server supports stream compression
+                    setAvailableCompressionMethods(
+                        PacketParserUtils.parseCompressionMethods(parser));
+                }
+            }
+            else if (eventType == XmlPullParser.END_TAG) {
+                if (name.equals("starttls")) {
+                    // Confirm the server that we want to use TLS
+                    startTLSReceived(startTLSRequired);
+                }
+                else if (name.equals("required") && startTLSReceived) {
+                    startTLSRequired = true;
+                }
+                else if (name.equals("features")) {
+                    lastLoop = true;
+                }
+            }
+
+            // This is the last loop of parsing "features" tag
+            if (lastLoop) {
+                // If TLS is required but the server doesn't offer it, disconnect
+                // from the server and throw an error. First check if we've already negotiated TLS
+                // and are secure, however (features get parsed a second time after TLS is established).
+                if (!isSecureConnection()) {
+                    if (!startTLSReceived && getConfiguration().getSecurityMode() ==
+                        ConnectionConfiguration.SecurityMode.required) {
+                        throw new XMPPException("Server does not support security (TLS), " +
+                            "but security required by connection configuration.",
+                            new XMPPError(XMPPError.Condition.forbidden));
+                    }
+                }
+
+                // Release the lock after TLS has been negotiated or we are not interested in TLS
+                if (!startTLSReceived || getConfiguration().getSecurityMode() ==
+                        ConnectionConfiguration.SecurityMode.disabled) {
+                    connected = true;
+                    releaseConnectionIDLock();
+                }
+
+                startTLSReceived = false;
+                startTLSReceived = false;
+            }
+        }
     }
 }
