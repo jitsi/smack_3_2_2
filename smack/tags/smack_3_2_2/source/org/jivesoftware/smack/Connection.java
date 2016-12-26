@@ -23,6 +23,7 @@ package org.jivesoftware.smack;
 import java.io.Reader;
 import java.io.Writer;
 import java.lang.reflect.Constructor;
+import java.net.*;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
@@ -246,6 +247,15 @@ public abstract class Connection {
      */
     public int getPort() {
         return config.getPort();
+    }
+
+    /**
+     * The currently used socket.
+     * @return the currently used socket or <tt>null</tt> if the implementing
+     * class does not use a socket as a transport.
+     */
+    public Socket getSocket() {
+        return null;
     }
 
     /**
