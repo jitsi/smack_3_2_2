@@ -38,17 +38,25 @@ import java.util.logging.Logger;
  * @see Connection#addPacketSendingListener
  *
  * @author Matt Tucker
+ * @author Pawel Domas
  */
-class PacketWriter {
+public abstract class PacketWriter {
 
     private static final Logger LOGGER = Logger.getLogger(PacketWriter.class.getName());
 
     private Thread writerThread;
     private Thread keepAliveThread;
-    private Writer writer;
-    private XMPPConnection connection;
+    protected Writer writer;
+    private AbstractConnection connection;
     private final BlockingQueue<Packet> queue;
     private boolean done;
+
+    /**
+     * Indicates whether queued packets should be bundled by calling
+     * {@link Writer#flush()} after all packets from the queue are written or if
+     * it should be called after each packet to send them separately.
+     */
+    private final boolean bundlePacket;
 
     /**
      * Timestamp when the last stanza was sent to the server. This information is used
@@ -60,10 +68,15 @@ class PacketWriter {
      * Creates a new packet writer with the specified connection.
      *
      * @param connection the connection.
+     * @param bundlePackets indicates whether queued packets should be bundled
+     * by calling {@link Writer#flush()} after all packets from the queue are
+     * written or if it should be called after each packet to send them
+     * separately.
      */
-    protected PacketWriter(XMPPConnection connection) {
+    public PacketWriter(AbstractConnection connection, boolean bundlePackets) {
         this.queue = new ArrayBlockingQueue<Packet>(500, true);
         this.connection = connection;
+        this.bundlePacket = bundlePackets;
         init();
     }
 
@@ -194,6 +207,8 @@ class PacketWriter {
                 if (packet != null) {
                     synchronized (writer) {
                         writer.write(packet.toXML());
+                        if (bundlePacket)
+                            emptyTheQueue();
                         writer.flush();
                         // Keep track of the last time a stanza was sent to the server
                         lastActive = System.currentTimeMillis();
@@ -205,10 +220,7 @@ class PacketWriter {
             // by the shutdown process.
             try {
                 synchronized (writer) {
-                   while (!queue.isEmpty()) {
-                       Packet packet = queue.remove();
-                        writer.write(packet.toXML());
-                    }
+                    emptyTheQueue();
                     writer.flush();
                 }
             }
@@ -221,8 +233,7 @@ class PacketWriter {
 
             // Close the stream.
             try {
-                writer.write("</stream:stream>");
-                writer.flush();
+                closeStream();
             }
             catch (Exception e) {
                 // Do nothing
@@ -244,23 +255,27 @@ class PacketWriter {
         }
     }
 
-    /**
-     * Sends to the server a new stream element. This operation may be requested several times
-     * so we need to encapsulate the logic in one place. This message will be sent while doing
-     * TLS, SASL and resource binding.
-     *
-     * @throws IOException If an error occurs while sending the stanza to the server.
-     */
-    void openStream() throws IOException {
-        StringBuilder stream = new StringBuilder();
-        stream.append("<stream:stream");
-        stream.append(" to=\"").append(connection.getServiceName()).append("\"");
-        stream.append(" xmlns=\"jabber:client\"");
-        stream.append(" xmlns:stream=\"http://etherx.jabber.org/streams\"");
-        stream.append(" version=\"1.0\">");
-        writer.write(stream.toString());
-        writer.flush();
+    private void emptyTheQueue() throws IOException {
+        while (!queue.isEmpty()) {
+            Packet packet = queue.remove();
+            writer.write(packet.toXML());
+        }
     }
+
+    /**
+     * Implementing class should open the XMPP stream. Method is called when
+     * the writer stream starts or when the class implementing the connection
+     * finds it necessary.
+     * @throws IOException
+     */
+    protected abstract void openStream() throws IOException;
+
+    /**
+     * Implementing class should close the XMPP stream. Method is called when
+     * the writer thread ends it's job.
+     * @throws IOException
+     */
+    protected abstract void closeStream() throws IOException;
 
     /**
      * A TimerTask that keeps connections to the server alive by sending a space

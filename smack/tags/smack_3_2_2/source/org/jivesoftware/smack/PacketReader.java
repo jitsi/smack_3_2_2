@@ -41,6 +41,7 @@ import java.util.logging.Logger;
  * @see Connection#createPacketCollector
  * @see Connection#addPacketListener
  * @author Matt Tucker
+ * @author Pawel Domas
  */
 class PacketReader {
 
@@ -49,15 +50,27 @@ class PacketReader {
     private Thread readerThread;
     private ExecutorService listenerExecutor;
 
-    private XMPPConnection connection;
-    private XmlPullParser parser;
-    private boolean done;
+    private AbstractConnection connection;
+    protected XmlPullParser parser;
+    protected boolean done;
 
-    private String connectionID = null;
+    private String streamRoot;
+
     private Semaphore connectionSemaphore;
 
-    protected PacketReader(final XMPPConnection connection) {
+    /**
+     * Creates new <tt>PacketReader</tt>.
+     *
+     * @param connection the connection for which the newly created
+     * <tt>PacketReader</tt> will be reading packets.
+     * @param streamRoot the name of root stream's XML element, when "end tag"
+     * for the XML element of this name is parsed, the connection will be
+     * disconnected.
+     */
+    public PacketReader(final AbstractConnection connection,
+                        String streamRoot) {
         this.connection = connection;
+        this.streamRoot = streamRoot;
         this.init();
     }
 
@@ -67,7 +80,6 @@ class PacketReader {
      */
     protected void init() {
         done = false;
-        connectionID = null;
 
         readerThread = new Thread() {
             public void run() {
@@ -107,23 +119,25 @@ class PacketReader {
         // Wait for stream tag before returing. We'll wait a couple of seconds before
         // giving up and throwing an error.
         try {
-            connectionSemaphore.acquire();
+            if (!connection.connected) {
+                connectionSemaphore.acquire();
+            }
 
             // A waiting thread may be woken up before the wait time or a notify
             // (although this is a rare thing). Therefore, we continue waiting
             // until either a connectionID has been set (and hence a notify was
             // made) or the total wait time has elapsed.
             int waitTime = SmackConfiguration.getPacketReplyTimeout();
-            connectionSemaphore.tryAcquire(3 * waitTime, TimeUnit.MILLISECONDS);
+            if (!connection.connected) {
+                connectionSemaphore.tryAcquire(
+                    3 * waitTime, TimeUnit.MILLISECONDS);
+            }
         }
         catch (InterruptedException ie) {
             // Ignore.
         }
-        if (connectionID == null) {
+        if (!connection.connected) {
             throw new XMPPException("Connection failed. No response from server.");
-        }
-        else {
-            connection.connectionID = connectionID;
         }
     }
 
@@ -205,7 +219,7 @@ class PacketReader {
      * when the plain connection has been secured or when a new opening stream element is going
      * to be sent by the server.
      */
-    private void resetParser() {
+    protected void resetParser() {
         try {
             parser = new MXParser();
             parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true);
@@ -222,109 +236,15 @@ class PacketReader {
      * @param thread the thread that is being used by the reader to parse incoming packets.
      */
     private void parsePackets(Thread thread) {
-        try {
+         try {
             int eventType = parser.getEventType();
             do {
-                if (eventType == XmlPullParser.START_TAG) {
-                    if (parser.getName().equals("message")) {
-                        processPacket(PacketParserUtils.parseMessage(parser));
-                    }
-                    else if (parser.getName().equals("iq")) {
-                        processPacket(PacketParserUtils.parseIQ(parser, connection));
-                    }
-                    else if (parser.getName().equals("presence")) {
-                        processPacket(PacketParserUtils.parsePresence(parser));
-                    }
-                    // We found an opening stream. Record information about it, then notify
-                    // the connectionID lock so that the packet reader startup can finish.
-                    else if (parser.getName().equals("stream")) {
-                        // Ensure the correct jabber:client namespace is being used.
-                        if ("jabber:client".equals(parser.getNamespace(null))) {
-                            // Get the connection id.
-                            for (int i=0; i<parser.getAttributeCount(); i++) {
-                                if (parser.getAttributeName(i).equals("id")) {
-                                    // Save the connectionID
-                                    connectionID = parser.getAttributeValue(i);
-                                    if (!"1.0".equals(parser.getAttributeValue("", "version"))) {
-                                        // Notify that a stream has been opened if the
-                                        // server is not XMPP 1.0 compliant otherwise make the
-                                        // notification after TLS has been negotiated or if TLS
-                                        // is not supported
-                                        releaseConnectionIDLock();
-                                    }
-                                }
-                                else if (parser.getAttributeName(i).equals("from")) {
-                                    // Use the server name that the server says that it is.
-                                    connection.config.setServiceName(parser.getAttributeValue(i));
-                                }
-                            }
-                        }
-                    }
-                    else if (parser.getName().equals("error")) {
-                        throw new XMPPException(PacketParserUtils.parseStreamError(parser));
-                    }
-                    else if (parser.getName().equals("features")) {
-                        parseFeatures(parser);
-                    }
-                    else if (parser.getName().equals("proceed")) {
-                        // Secure the connection by negotiating TLS
-                        connection.proceedTLSReceived();
-                        // Reset the state of the parser since a new stream element is going
-                        // to be sent by the server
-                        resetParser();
-                    }
-                    else if (parser.getName().equals("failure")) {
-                        String namespace = parser.getNamespace(null);
-                        if ("urn:ietf:params:xml:ns:xmpp-tls".equals(namespace)) {
-                            // TLS negotiation has failed. The server will close the connection
-                            throw new Exception("TLS negotiation has failed");
-                        }
-                        else if ("http://jabber.org/protocol/compress".equals(namespace)) {
-                            // Stream compression has been denied. This is a recoverable
-                            // situation. It is still possible to authenticate and
-                            // use the connection but using an uncompressed connection
-                            connection.streamCompressionDenied();
-                        }
-                        else {
-                            // SASL authentication has failed. The server may close the connection
-                            // depending on the number of retries
-                            final Failure failure = PacketParserUtils.parseSASLFailure(parser);
-                            processPacket(failure);
-                            connection.getSASLAuthentication().authenticationFailed(failure.getCondition());
-                        }
-                    }
-                    else if (parser.getName().equals("challenge")) {
-                        // The server is challenging the SASL authentication made by the client
-                        String challengeData = parser.nextText();
-                        processPacket(new Challenge(challengeData));
-                        connection.getSASLAuthentication().challengeReceived(challengeData);
-                    }
-                    else if (parser.getName().equals("success")) {
-                        processPacket(new Success(parser.nextText()));
-                        // We now need to bind a resource for the connection
-                        // Open a new stream and wait for the response
-                        connection.packetWriter.openStream();
-                        // Reset the state of the parser since a new stream element is going
-                        // to be sent by the server
-                        resetParser();
-                        // The SASL authentication with the server was successful. The next step
-                        // will be to bind the resource
-                        connection.getSASLAuthentication().authenticated();
-                    }
-                    else if (parser.getName().equals("compressed")) {
-                        // Server confirmed that it's possible to use stream compression. Start
-                        // stream compression
-                        connection.startStreamCompression();
-                        // Reset the state of the parser since a new stream element is going
-                        // to be sent by the server
-                        resetParser();
-                    }
-                }
-                else if (eventType == XmlPullParser.END_TAG) {
-                    if (parser.getName().equals("stream")) {
-                        // Disconnect the connection
-                        connection.disconnect();
-                    }
+                if (eventType == XmlPullParser.END_TAG
+                        && streamRoot.equals(parser.getName())) {
+                    // End of stream - disconnect the connection
+                    connection.disconnect();
+                } else {
+                    doParsePackets(parser);
                 }
                 eventType = parser.next();
             } while (!done && eventType != XmlPullParser.END_DOCUMENT && thread == readerThread);
@@ -339,15 +259,66 @@ class PacketReader {
     }
 
     /**
-     * Releases the connection ID lock so that the thread that was waiting can resume. The
-     * lock will be released when one of the following three conditions is met:<p>
+     * The method is called in the main parsing loop to process top level
+     * packets. {@link XmlPullParser#next()} is called automatically and should
+     * not be called unless it's ok to consume the element.
+     *
+     * @param parser the <tt>XmlPullParser</tt>
+     */
+    protected void doParsePackets(XmlPullParser parser) throws Exception {
+        int eventType = parser.getEventType();
+        if (eventType == XmlPullParser.START_TAG) {
+            if (parser.getName().equals("message")) {
+                processPacket(PacketParserUtils.parseMessage(parser));
+            }
+            else if (parser.getName().equals("iq")) {
+                processPacket(PacketParserUtils.parseIQ(parser, connection));
+            }
+            else if (parser.getName().equals("presence")) {
+                processPacket(PacketParserUtils.parsePresence(parser));
+            }
+            else if (parser.getName().equals("error")) {
+                throw new XMPPException(PacketParserUtils.parseStreamError(parser));
+            }
+            else if (parser.getName().equals("features")) {
+                parseFeatures(parser);
+            }
+            else if (parser.getName().equals("failure")) {
+                // SASL authentication has failed. The server may close the connection
+                // depending on the number of retries
+                final Failure failure = PacketParserUtils.parseSASLFailure(parser);
+                processPacket(failure);
+                connection.getSASLAuthentication().authenticationFailed(failure.getCondition());
+            }
+            else if (parser.getName().equals("challenge")) {
+                // The server is challenging the SASL authentication made by the client
+                String challengeData = parser.nextText();
+                processPacket(new Challenge(challengeData));
+                connection.getSASLAuthentication().challengeReceived(challengeData);
+            }
+            else if (parser.getName().equals("success")) {
+                processPacket(new Success(parser.nextText()));
+                // Let the connection react first
+                connection.onSuccessReceived();
+                // The SASL authentication with the server was successful. The next step
+                // will be to bind the resource
+                connection.getSASLAuthentication().authenticated();
+            }
+        }
+    }
+
+    /**
+     * Releases the connection lock so that the thread that was waiting can resume. The
+     * lock will be released when one of the following three conditions is met (for TCP connection):<p>
      *
      * 1) An opening stream was sent from a non XMPP 1.0 compliant server
      * 2) Stream features were received from an XMPP 1.0 compliant server that does not support TLS
      * 3) TLS negotiation was successful
      *
+     * In case of BOSH the method is called when the BOSH client connect's to
+     * the server.
      */
-    private void releaseConnectionIDLock() {
+    void releaseConnectionIDLock() {
         connectionSemaphore.release();
     }
 
@@ -365,7 +336,11 @@ class PacketReader {
 
         // Loop through all collectors and notify the appropriate ones.
         for (PacketCollector collector: connection.getPacketCollectors()) {
-            collector.processPacket(packet);
+            try {
+                collector.processPacket(packet);
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Faulty PacketCollector", e);
+            }
         }
 
         // Deliver the incoming packet to listeners.
@@ -373,71 +348,42 @@ class PacketReader {
     }
 
     private void parseFeatures(XmlPullParser parser) throws Exception {
-        boolean startTLSReceived = false;
-        boolean startTLSRequired = false;
         boolean done = false;
+
         while (!done) {
             int eventType = parser.next();
 
-            if (eventType == XmlPullParser.START_TAG) {
-                if (parser.getName().equals("starttls")) {
-                    startTLSReceived = true;
-                }
-                else if (parser.getName().equals("mechanisms")) {
-                    // The server is reporting available SASL mechanisms. Store this information
-                    // which will be used later while logging (i.e. authenticating) into
-                    // the server
-                    connection.getSASLAuthentication()
-                            .setAvailableSASLMethods(PacketParserUtils.parseMechanisms(parser));
-                }
-                else if (parser.getName().equals("bind")) {
-                    // The server requires the client to bind a resource to the stream
-                    connection.getSASLAuthentication().bindingRequired();
-                }
-                else if (parser.getName().equals("session")) {
-                    // The server supports sessions
-                    connection.getSASLAuthentication().sessionsSupported();
-                }
-                else if (parser.getName().equals("compression")) {
-                    // The server supports stream compression
-                    connection.setAvailableCompressionMethods(PacketParserUtils.parseCompressionMethods(parser));
-                }
-                else if (parser.getName().equals("register")) {
-                    connection.getAccountManager().setSupportsAccountCreation(true);
-                }
+            if (eventType == XmlPullParser.END_TAG
+                    && "features".equals(parser.getName())) {
+                done = true;
             }
-            else if (eventType == XmlPullParser.END_TAG) {
-                if (parser.getName().equals("starttls")) {
-                    // Confirm the server that we want to use TLS
-                    connection.startTLSReceived(startTLSRequired);
-                }
-                else if (parser.getName().equals("required") && startTLSReceived) {
-                    startTLSRequired = true;
-                }
-                else if (parser.getName().equals("features")) {
-                    done = true;
-                }
-            }
-        }
 
-        // If TLS is required but the server doesn't offer it, disconnect
-        // from the server and throw an error. First check if we've already negotiated TLS
-        // and are secure, however (features get parsed a second time after TLS is established).
-        if (!connection.isSecureConnection()) {
-            if (!startTLSReceived && connection.getConfiguration().getSecurityMode() ==
-                    ConnectionConfiguration.SecurityMode.required)
-            {
-                throw new XMPPException("Server does not support security (TLS), " +
-                        "but security required by connection configuration.",
-                        new XMPPError(XMPPError.Condition.forbidden));
-            }
+            doParseFeatures(parser);
         }
-        
-        // Release the lock after TLS has been negotiated or we are not insterested in TLS
-        if (!startTLSReceived || connection.getConfiguration().getSecurityMode() ==
-                ConnectionConfiguration.SecurityMode.disabled)
-        {
-            releaseConnectionIDLock();
+    }
+
+    protected void doParseFeatures(XmlPullParser parser) throws Exception {
+        int eventType = parser.getEventType();
+
+        if (eventType == XmlPullParser.START_TAG) {
+            if (parser.getName().equals("mechanisms")) {
+                // The server is reporting available SASL mechanisms. Store this information
+                // which will be used later while logging (i.e. authenticating) into
+                // the server
+                connection.getSASLAuthentication()
+                    .setAvailableSASLMethods(PacketParserUtils.parseMechanisms(parser));
+            }
+            else if (parser.getName().equals("bind")) {
+                // The server requires the client to bind a resource to the stream
+                connection.getSASLAuthentication().bindingRequired();
+            }
+            else if (parser.getName().equals("session")) {
+                // The server supports sessions
+                connection.getSASLAuthentication().sessionsSupported();
+            }
+            else if (parser.getName().equals("register")) {
+                connection.getAccountManager().setSupportsAccountCreation(true);
+            }
         }
     }
 
