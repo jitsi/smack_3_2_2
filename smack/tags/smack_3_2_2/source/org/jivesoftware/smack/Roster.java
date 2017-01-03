@@ -32,6 +32,7 @@ import org.jivesoftware.smack.util.StringUtils;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Logger;
 
 /**
  * Represents a user's roster, which is the collection of users a person receives
@@ -48,6 +49,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * @see Connection#getRoster()
  */
 public class Roster {
+
+    private static final Logger LOGGER = Logger.getLogger(Roster.class.getName());
 
     /**
      * The default subscription processing mode to use when a Roster is created. By default
@@ -812,13 +815,28 @@ public class Roster {
                 return;
             }
 
+            RosterPacket rosterPacket = (RosterPacket) packet;
+            // Roster push (RFC 6121, 2.1.6)
+            // A roster push with a non-empty from not matching our address MUST be ignored
+            String jid = StringUtils.parseBareAddress(connection.getUser());
+            String service = StringUtils.parseServer(connection.getUser());
+            String from = rosterPacket.getFrom();
+            if (from != null && !(from.equals(jid) || from.equals(service))) {
+                LOGGER.warning("Ignoring roster push with a non matching 'from' ourJid='"
+                        + jid + "' from='" + from + "'");
+                XMPPError error = new XMPPError(XMPPError.Condition.service_unavailable, "");
+                IQ errorIQ = IQ.createErrorResponse(rosterPacket, error);
+                connection.sendPacket(errorIQ);
+
+                return;
+            }
+
             // Keep a registry of the entries that were added, deleted or updated. An event
             // will be fired for each affected entry
             Collection<String> addedEntries = new ArrayList<String>();
             Collection<String> updatedEntries = new ArrayList<String>();
             Collection<String> deletedEntries = new ArrayList<String>();
 
-            RosterPacket rosterPacket = (RosterPacket) packet;
             for (RosterPacket.Item item : rosterPacket.getRosterItems()) {
                 RosterEntry entry = new RosterEntry(item.getUser(), item.getName(),
                         item.getItemType(), item.getItemStatus(), Roster.this, connection);
