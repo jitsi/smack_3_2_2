@@ -35,7 +35,7 @@ import org.jivesoftware.smack.packet.PacketExtension;
  */
 public class MUCUser implements PacketExtension {
 
-    private final Set<Status> statusCodes = new HashSet<>(4);
+    private final Set<Status> statusCodes = new HashSet<Status>(4);
 
     private Invite invite;
     private Decline decline;
