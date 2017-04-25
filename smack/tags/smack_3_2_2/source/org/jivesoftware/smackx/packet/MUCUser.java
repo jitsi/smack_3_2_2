@@ -20,6 +20,11 @@
 
 package org.jivesoftware.smackx.packet;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import org.jivesoftware.smack.packet.PacketExtension;
 
 /**
@@ -29,6 +34,8 @@ import org.jivesoftware.smack.packet.PacketExtension;
  * @author Gaston Dombiak
  */
 public class MUCUser implements PacketExtension {
+
+    private final Set<Status> statusCodes = new HashSet<>(4);
 
     private Invite invite;
     private Decline decline;
@@ -61,8 +68,8 @@ public class MUCUser implements PacketExtension {
         if (getPassword() != null) {
             buf.append("<password>").append(getPassword()).append("</password>");
         }
-        if (getStatus() != null) {
-            buf.append(getStatus().toXML());
+        for (Status status : getStatus()) {
+            buf.append(status.toXML());
         }
         if (getDestroy() != null) {
             buf.append(getDestroy().toXML());
@@ -112,12 +119,14 @@ public class MUCUser implements PacketExtension {
     }
 
     /**
-     * Returns the status which holds a code that assists in presenting notification messages.
+     * Returns a set of status which holds the status code that assist in presenting
+     * notification messages.
      *
-     * @return the status which holds a code that assists in presenting notification messages.
+     * @return the set of status which holds the status code that assist in presenting
+     * notification messages.
      */
-    public Status getStatus() {
-        return status;
+    public Set<Status> getStatus() {
+        return statusCodes;
     }
 
     /**
@@ -172,13 +181,22 @@ public class MUCUser implements PacketExtension {
     }
 
     /**
-     * Sets the status which holds a code that assists in presenting notification messages.
+     * Add the status codes which holds the codes that assists in presenting notification messages.
      *
-     * @param status the status which holds a code that assists in presenting notification
+     * @param statusCodes the status codes which hold the codes that assists in presenting notification
      * messages.
      */
-    public void setStatus(Status status) {
-        this.status = status;
+    public void addStatusCodes(Set<Status> statusCodes) {
+        this.statusCodes.addAll(statusCodes);
+    }
+
+    /**
+     * Add a status code which hold a code that assists in presenting notification messages.
+     *
+     * @param status the status code which olds a code that assists in presenting notification messages.
+     */
+    public void addStatusCode(Status status) {
+        this.statusCodes.add(status);
     }
 
     /**
@@ -523,19 +541,43 @@ public class MUCUser implements PacketExtension {
 
     /**
      * Status code assists in presenting notification messages. The following link provides the
-     * list of existing error codes (@link http://www.jabber.org/jeps/jep-0045.html#errorstatus).
+     * list of existing error codes <a href="http://xmpp.org/registrar/mucstatus.html">Multi-User Chat Status Codes</a>.
      *
      * @author Gaston Dombiak
      */
     public static class Status {
-        private String code;
+
+        private static final Map<Integer, Status> statusMap = new HashMap<Integer, Status>(8);
+
+        public static final Status PRESENCE_TO_SELF_110 = Status.create(110);
+        public static final Status ROOM_CREATED_201 = Status.create(201);
+        public static final Status BANNED_301 = Status.create(301);
+        public static final Status NEW_NICKNAME_303 = Status.create(303);
+        public static final Status KICKED_307 = Status.create(307);
+        public static final Status REMOVED_AFFIL_CHANGE_321 = Status.create(321);
+
+        private final Integer code;
+
+        public static Status create(String string) {
+            Integer integer = Integer.valueOf(string);
+            return create(integer);
+        }
+
+        public static Status create(Integer i) {
+            Status status = statusMap.get(i);
+            if (status == null) {
+                status = new Status(i);
+                statusMap.put(i, status);
+            }
+            return status;
+        }
 
         /**
          * Creates a new instance of Status with the specified code.
          *
          * @param code the code that uniquely identifies the reason of the error.
          */
-        public Status(String code) {
+        public Status(int code) {
             this.code = code;
         }
 
@@ -545,7 +587,7 @@ public class MUCUser implements PacketExtension {
          *
          * @return the code that uniquely identifies the reason of the error.
          */
-        public String getCode() {
+        public int getCode() {
             return code;
         }
 
@@ -553,6 +595,23 @@ public class MUCUser implements PacketExtension {
             StringBuilder buf = new StringBuilder();
             buf.append("<status code=\"").append(getCode()).append("\"/>");
             return buf.toString();
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (other == null) {
+                return false;
+            }
+            if (other instanceof Status) {
+                Status otherStatus = (Status) other;
+                return code.equals(otherStatus.getCode());
+            }
+            return false;
+        }
+
+        @Override
+        public int hashCode() {
+            return code;
         }
     }
 
