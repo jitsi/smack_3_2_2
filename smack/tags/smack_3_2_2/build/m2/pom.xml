@@ -12,6 +12,13 @@
   <name>smack-universe</name>
   <url>http://www.igniterealtime.org/projects/smack/</url>
 
+  <parent>
+    <groupId>org.jitsi</groupId>
+    <artifactId>jitsi-universe</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <relativePath>../../../../../../jitsi-universe/pom.xml</relativePath>
+  </parent>
+
   <modules>
     <module>smack</module>
     <module>smackx</module>
