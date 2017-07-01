@@ -22,7 +22,7 @@
       <artifactId>xpp3</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.github.igniterealtime</groupId>
+      <groupId>org.igniterealtime.jbosh</groupId>
       <artifactId>jbosh</artifactId>
     </dependency>
   </dependencies>
