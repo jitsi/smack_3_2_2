@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.test.SmackTestCase;
 
 /**
@@ -57,6 +59,11 @@ public class RosterListenerTest extends SmackTestCase {
 
             public void entriesAdded(Collection<String> addresses) {
                 addedEntries.addAll(addresses);
+            }
+
+            @Override
+            public void rosterError(XMPPError error, Packet packet) {
+                // ignore
             }
         });
 
@@ -114,6 +121,11 @@ public class RosterListenerTest extends SmackTestCase {
 
             public void entriesAdded(Collection<String> addresses) {
                 addedEntries.addAll(addresses);
+            }
+
+            @Override
+            public void rosterError(XMPPError error, Packet packet) {
+                // ignore
             }
         });
 
