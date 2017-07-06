@@ -26,6 +26,7 @@ import java.util.logging.*;
 
 import org.igniterealtime.jbosh.*;
 import org.jivesoftware.smack.packet.Presence;
+import org.xmlpull.v1.XmlPullParser;
 
 /**
  * Creates a connection to an XMPP server via HTTP binding.
@@ -144,7 +145,7 @@ public class XMPPBOSHConnection extends AbstractConnection {
      */
     @Override
     protected PacketReader createPacketReader() {
-        return new PacketReader(this, BOSH_STREAM_ROOT);
+        return new BoshPacketReaderWrapper();
     }
 
     /**
@@ -249,29 +250,17 @@ public class XMPPBOSHConnection extends AbstractConnection {
          * connection was formerly authenticated and is now reconnected.
          */
         public void connectionEvent(BOSHClientConnEvent connEvent) {
-            try {
-                if (connEvent.isConnected()) {
-                    connected = true;
+            if (!connEvent.isConnected()) {
+                if (connEvent.isError()) {
+                    // TODO Check why jbosh's getCause returns Throwable here. This is very
+                    // unusual and should be avoided if possible
+                    if (packetReader != null)
+                        packetReader.notifyConnectionError(
+                            new IOException(connEvent.getCause()));
+                    else
+                        LOGGER.log(Level.SEVERE, "BOSH ERROR", connEvent.getCause());
                 }
-                else {
-                    if (connEvent.isError()) {
-                        // TODO Check why jbosh's getCause returns Throwable here. This is very
-                        // unusual and should be avoided if possible
-                        if (packetReader != null)
-                            packetReader.notifyConnectionError(
-                                new IOException(connEvent.getCause()));
-                        else
-                            LOGGER.log(Level.SEVERE, "BOSH ERROR", connEvent.getCause());
-                    }
-                    connected = false;
-                }
-            }
-            finally {
-                // If the connection happens fast the packetReader will be null,
-                // but it will check the flag before sleeping on the semaphore.
-                if (packetReader != null) {
-                    packetReader.releaseConnectionIDLock();
-                }
+                connected = false;
             }
         }
     }
@@ -417,6 +406,33 @@ public class XMPPBOSHConnection extends AbstractConnection {
         @Override
         public void close() throws IOException {
             buffer = null;
+        }
+    }
+
+    /**
+     * Wrapper of PacketReader in order to wait for parsing features before setting connection
+     * to connected and releasing the connection lock of the packet reader.
+     */
+    private class BoshPacketReaderWrapper extends PacketReader {
+        private BoshPacketReaderWrapper() {
+            super(XMPPBOSHConnection.this, BOSH_STREAM_ROOT);
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override
+        protected void doParseFeatures(XmlPullParser parser) throws Exception {
+            super.doParseFeatures(parser);
+
+            int eventType = parser.getEventType();
+            String name = parser.getName();
+            if (eventType == XmlPullParser.END_TAG) {
+                if (name.equals("features")) {
+                    connected = true;
+                    packetReader.releaseConnectionIDLock();
+                }
+            }
         }
     }
 }
