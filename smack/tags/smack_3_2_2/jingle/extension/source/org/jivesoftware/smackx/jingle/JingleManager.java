@@ -33,6 +33,7 @@ import org.jivesoftware.smack.filter.PacketFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smack.util.StringUtils;
 import org.jivesoftware.smackx.ServiceDiscoveryManager;
@@ -240,6 +241,9 @@ public class JingleManager implements JingleSessionListener {
                             e.printStackTrace();
                         }
                 }
+            }
+
+            public void rosterError(XMPPError error, Packet packet) {
             }
         });
 

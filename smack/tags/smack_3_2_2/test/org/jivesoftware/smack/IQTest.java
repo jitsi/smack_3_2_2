@@ -50,7 +50,7 @@ public class IQTest extends SmackTestCase {
             }
         };
 
-        PacketFilter filter = new AndFilter(new IQReplyFilter(iq, getConnection(0))),
+        PacketFilter filter = new AndFilter(new IQReplyFilter(iq, getConnection(0)),
                 new PacketTypeFilter(IQ.class));
         PacketCollector collector = getConnection(0).createPacketCollector(filter);
         // Send the iq packet with an invalid namespace

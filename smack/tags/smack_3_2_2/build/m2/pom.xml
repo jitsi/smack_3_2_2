@@ -6,7 +6,7 @@
 
   <groupId>org.igniterealtime.smack</groupId>
   <artifactId>smack-universe</artifactId>
-  <version>3.2.2-jitsi-2-SNAPSHOT</version>
+  <version>3.2.2-jitsi-3-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>smack-universe</name>
@@ -34,19 +34,12 @@
         <version>1.1.4c</version>
       </dependency>
       <dependency>
-        <groupId>com.github.igniterealtime</groupId>
+        <groupId>org.igniterealtime.jbosh</groupId>
         <artifactId>jbosh</artifactId>
-        <version>06ee5a43a0</version>
+        <version>0.9.0</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
-
-  <repositories>
-    <repository>
-      <id>jitpack.io</id>
-      <url>https://jitpack.io</url>
-    </repository>
-  </repositories>
 
   <build>
     <sourceDirectory>../../../source</sourceDirectory>
