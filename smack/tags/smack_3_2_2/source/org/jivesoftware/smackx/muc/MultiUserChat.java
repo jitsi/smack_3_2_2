@@ -1980,7 +1980,7 @@ public class MultiUserChat {
                 else if (presence.getType() == Presence.Type.unavailable) {
                     occupantsMap.remove(from);
                     MUCUser mucUser = getMUCUserExtension(presence);
-                    if (mucUser != null && mucUser.getStatus() != null) {
+                    if (mucUser != null && mucUser.getStatus() != null && !mucUser.getStatus().isEmpty()) {
                         // Fire events according to the received presence code
                         checkPresenceCode(
                             mucUser.getStatus(),
