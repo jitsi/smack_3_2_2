@@ -818,10 +818,11 @@ public class Roster {
             RosterPacket rosterPacket = (RosterPacket) packet;
             // Roster push (RFC 6121, 2.1.6)
             // A roster push with a non-empty from not matching our address MUST be ignored
-            String jid = StringUtils.parseBareAddress(connection.getUser());
+            String jid = connection.getUser();
+            String bareJid = StringUtils.parseBareAddress(connection.getUser());
             String service = StringUtils.parseServer(connection.getUser());
             String from = rosterPacket.getFrom();
-            if (from != null && !(from.equals(jid) || from.equals(service))) {
+            if (from != null && !(from.equals(jid) || from.equals(bareJid) || from.equals(service))) {
                 LOGGER.warning("Ignoring roster push with a non matching 'from' ourJid='"
                         + jid + "' from='" + from + "'");
                 XMPPError error = new XMPPError(XMPPError.Condition.service_unavailable, "");
